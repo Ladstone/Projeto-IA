@@ -67,14 +67,22 @@ def index():return FileResponse(STATIC/'index.html')
 
 @app.get('/api/health')
 def health():
-    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':len(FOOD_CLASS_MAP),'training_sources':['MyFood Dataset','Brazilian Food Images'],'taco_fields':len(META),'mode':'local-only','model':'FoodUNet 21 classes (MyFood + Brazilian Food Images)','nutrition':'TACO 4ª edição — 2011'}
+    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':len(FOOD_CLASS_MAP),'training_sources':['MyFood Dataset','Brazilian Food Images'],'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'nutrition':'TACO 4ª edição — 2011'}
+
+def model_description():
+    """Descrição lida do .json do modelo ativo, para não ficar desatualizada ao trocar de modelo."""
+    if vision is None:
+        return None
+    return vision.metadata.get('model') or f'{vision.architecture}, 21 classes'
 
 @app.get('/api/model/info')
 def model_info():
     from .unified_classes import CLASS_LABELS
-    return {'model':'U-Net compacta, 21 saídas sigmoid',
+    return {'model':model_description(),
+            'label':vision.metadata.get('label') if vision else None,
             'datasets':['MyFood Dataset.zip','Brazilian food images.zip'],
-            'mascaras':'Supervisão parcial: apenas classes anotadas são usadas na perda',
+            'mascaras':'Pixels anotados supervisionam todas as classes (positivo na própria, negativo nas demais); '
+                       'no conjunto brasileiro, pixels não anotados só contam para a classe anotada',
             'classes_visuais':CLASS_LABELS,
             'metadata':vision.metadata if vision else {},
             'observacao':'Estas são categorias visuais, não os 597 registros da TACO. Pesos e preparo devem ser conferidos.',
