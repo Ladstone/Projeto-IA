@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
-from .vision import VisionService, LABEL_COLORS, CLASS_LABELS
+from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
@@ -67,14 +67,22 @@ def index():return FileResponse(STATIC/'index.html')
 
 @app.get('/api/health')
 def health():
-    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':len(FOOD_CLASS_MAP),'training_sources':['MyFood Dataset','Brazilian Food Images'],'taco_fields':len(META),'mode':'local-only','model':'FoodUNet 21 classes (MyFood + Brazilian Food Images)','nutrition':'TACO 4ª edição — 2011'}
+    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':len(FOOD_CLASS_MAP),'training_sources':['MyFood Dataset','Brazilian Food Images'],'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'nutrition':'TACO 4ª edição — 2011'}
+
+def model_description():
+    """Descrição lida do .json do modelo ativo, para não ficar desatualizada ao trocar de modelo."""
+    if vision is None:
+        return None
+    return vision.metadata.get('model') or f'{vision.architecture}, 21 classes'
 
 @app.get('/api/model/info')
 def model_info():
     from .unified_classes import CLASS_LABELS
-    return {'model':'U-Net compacta, 21 saídas sigmoid',
+    return {'model':model_description(),
+            'label':vision.metadata.get('label') if vision else None,
             'datasets':['MyFood Dataset.zip','Brazilian food images.zip'],
-            'mascaras':'Supervisão parcial: apenas classes anotadas são usadas na perda',
+            'mascaras':'Pixels anotados supervisionam todas as classes (positivo na própria, negativo nas demais); '
+                       'no conjunto brasileiro, pixels não anotados só contam para a classe anotada',
             'classes_visuais':CLASS_LABELS,
             'metadata':vision.metadata if vision else {},
             'observacao':'Estas são categorias visuais, não os 597 registros da TACO. Pesos e preparo devem ser conferidos.',
@@ -117,9 +125,8 @@ def post_recalculate(body:RecalculateRequest):
     try:return recalculate([b.model_dump() for b in body.items],profile_get())
     except ValueError as e:raise HTTPException(422,str(e))
 
-# Regiões menores que isto foram, nos testes com as fotos de exemplo, quase sempre
-# falsos positivos (manchas de 1-2% da imagem). Heurística, NÃO validada estatisticamente.
-MIN_REGION_FRACTION=0.03
+# MIN_REGION_FRACTION (área mínima de detecção) fica em app/vision.py para que o app
+# e scripts/evaluate_models.py usem exatamente a mesma regra.
 # Cobertura da imagem que corresponde à porção padrão da categoria. Heurística:
 # um item típico de prato feito ocupa cerca de 1/5 de uma foto de cima.
 REFERENCE_REGION_FRACTION=0.20
@@ -167,7 +174,7 @@ async def analyze(file:UploadFile=File(...)):
         raise HTTPException(413,'Imagem deve ter no máximo 8 MB')
     image=load_image(raw)
     with model_lock:
-        mask,probs=vision.predict(image,dimension=vision.metadata.get('resolution',160))
+        mask,probs=vision.predict(image)
 
     detected=[]
     diagnostics=[]

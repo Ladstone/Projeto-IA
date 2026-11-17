@@ -71,8 +71,10 @@ def test_pasta_classes_use_distinct_taco_rows():
     assert FOOD_CLASS_MAP[8]['taco_id'] != FOOD_CLASS_MAP[17]['taco_id']
 
 
-@pytest.mark.xfail(strict=True, reason='Limitação conhecida do modelo atual (Fase B): '
-                   'cor marrom lisa é classificada como feijão. Remova este xfail quando o novo modelo passar.')
+# Com o v1 estes dois casos falhavam (marrom virava feijão, ruído virava arroz) e estavam
+# marcados como xfail. O v2 treinou com imagens sem comida, então passaram a ser exigidos.
+# Atenção: o treino do v2 incluiu cores lisas e ruído uniforme, tipos parecidos com estes;
+# a métrica independente está em docs/METRICAS_PILOTO_V2.json (tipos não vistos no treino).
 def test_plain_brown_image_is_not_detected_as_food():
     buffer = BytesIO()
     Image.new('RGB', (400, 300), (120, 80, 40)).save(buffer, format='PNG')
@@ -80,7 +82,6 @@ def test_plain_brown_image_is_not_detected_as_food():
     assert data['detected'] == []
 
 
-@pytest.mark.xfail(strict=True, reason='Limitação conhecida do modelo atual (Fase B): ruído vira arroz.')
 def test_random_noise_is_not_detected_as_food():
     buffer = BytesIO()
     noise = np.random.RandomState(0).randint(0, 255, (300, 400, 3), dtype=np.uint8)
