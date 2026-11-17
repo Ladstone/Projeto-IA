@@ -20,7 +20,7 @@ CLASSES={
  14:('Farofa',131,40,'Farofa de mandioca temperada como aproximação'),
  15:('Beterraba',97,60,'Beterraba cozida como aproximação'),
  16:('Purê',91,115,'Batata inglesa cozida como PROXY: purê com leite/manteiga tem outros nutrientes'),
- 17:('Massa com molho vermelho',542,140,'Macarrão à bolonhesa como PROXY: molho vermelho pode não ter carne'),
+ 17:('Massa com molho vermelho',37,140,'Massa fresca cozida como PROXY (a TACO não tem massa ao sugo): acrescente "Tomate, molho industrializado" (#159) para o molho'),
  18:('Repolho',149,55,'Repolho branco cru como aproximação'),
  19:('Milho',45,70,'Milho verde enlatado e drenado como aproximação'),
  20:('Salada com maionese',545,90,'Salada de legumes com maionese como aproximação'),

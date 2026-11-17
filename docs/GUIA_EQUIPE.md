@@ -26,7 +26,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 
 1. **Falsos positivos repetidos:** a rede por vezes identifica classes ausentes. Ajustar estratégia de detecção, dataset e calibração sem inventar rótulos corretos.
 2. **Separação treino/avaliação:** o conjunto brasileiro possui máscaras individuais por classe; é necessário avaliar fotos novas de pratos completos com anotações multiclasse antes de afirmar acurácia geral.
-3. **Estimativa de peso:** atualmente há porções iniciais sugeridas por categoria, **não estimadas da imagem**. O usuário deve informar os gramas.
+3. **Estimativa de peso:** a porção inicial é a porção padrão da categoria escalada pela área visível (20% da foto = porção padrão; limitada a 25%–150%). É uma heurística, **não uma medição de massa**. O usuário deve informar os gramas.
 4. **Tipo de preparo:** "frango" visual é mapeado provisoriamente para peito grelhado; o usuário precisa confirmar ou substituir.
 5. **Recomendações:** atualmente são regras e comparações com metas por refeição. Não é orientação clínica.
 

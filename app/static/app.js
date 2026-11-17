@@ -1,7 +1,14 @@
 const $ = (id)=>document.getElementById(id);
 const STATE={file:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[]};
 function showStatus(id,message,error=false){const el=$(id);el.textContent=message;el.classList.toggle('error',error);}
-async function api(url,opts={}){let res=await fetch(url,opts);let body;try{body=await res.json();}catch{throw new Error(`Resposta inválida (${res.status})`)}if(!res.ok)throw new Error(typeof body.detail==='string'?body.detail:JSON.stringify(body.detail||body));return body;}
+const FIELD_LABELS={kcal:'Meta energética',proteina_g:'Proteínas',carboidrato_g:'Carboidratos',lipideos_g:'Gorduras',refeicoes:'Refeições por dia',objetivo:'Objetivo',grams:'Gramas',taco_id:'Alimento TACO'};
+// Erros 422 do FastAPI chegam como lista [{loc,msg}]: transforma em texto legível.
+function formatApiError(detail){
+ if(typeof detail==='string')return detail;
+ if(Array.isArray(detail))return detail.map(d=>{const field=(d.loc||[]).filter(p=>typeof p==='string'&&p!=='body').pop();return `${FIELD_LABELS[field]||field||'Valor'}: ${d.msg}`;}).join('; ');
+ return 'Erro inesperado no servidor.';
+}
+async function api(url,opts={}){let res=await fetch(url,opts);let body;try{body=await res.json();}catch{throw new Error(`Resposta inválida (${res.status})`)}if(!res.ok)throw new Error(formatApiError(body.detail));return body;}
 const numeric=(v)=>Number(v||0);
 function getProfileForm(){return {objetivo:$('goal').value,kcal:numeric($('kcal').value),proteina_g:numeric($('protein').value),carboidrato_g:numeric($('carbs').value),lipideos_g:numeric($('fats').value),refeicoes:numeric($('meals').value)};}
 function fillProfile(p){$('goal').value=p.objetivo;$('kcal').value=p.kcal;$('protein').value=p.proteina_g;$('carbs').value=p.carboidrato_g;$('fats').value=p.lipideos_g;$('meals').value=p.refeicoes;}
@@ -9,19 +16,28 @@ async function saveProfile(e){if(e)e.preventDefault();try{await api('/api/profil
 function selectFile(file){if(!file)return;if(!file.type.startsWith('image/')){showStatus('analysisStatus','Escolha um arquivo de imagem.',true);return}if(file.size>8*1024*1024){showStatus('analysisStatus','O arquivo excede 8 MB.',true);return}STATE.file=file;STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();const url=URL.createObjectURL(file);if($('photo').dataset.objectUrl)URL.revokeObjectURL($('photo').dataset.objectUrl);$('photo').dataset.objectUrl=url;$('photo').src=url;$('dropArea').classList.add('has-photo');$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=file.name;$('photoStatus').textContent='Foto pronta para análise';$('analyzeBtn').disabled=false;showStatus('analysisStatus','Imagem selecionada. Clique em analisar.');}
 async function selectExample(type){const resp=await fetch('/static/examples/'+type+'.jpg');if(!resp.ok)return showStatus('analysisStatus','Exemplo indisponível.',true);const blob=await resp.blob();selectFile(new File([blob],`${type}.jpg`,{type:'image/jpeg'}));}
 function normalize(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
-function foodLookup(text){const query=normalize(text);return STATE.taco.find(f=>normalize(f.nome)===query)||STATE.taco.find(f=>query.split(/\s+/).every(t=>normalize(f.nome).includes(t)));}
+// Nome exato primeiro; senão, entre os que contêm todas as palavras, prefere o que
+// começa pela busca e depois o nome mais curto (ex.: "arroz" -> "Arroz, tipo 1, cozido").
+function foodLookup(text){
+ const query=normalize(text);if(!query)return undefined;
+ const exact=STATE.taco.find(f=>normalize(f.nome)===query);if(exact)return exact;
+ const terms=query.split(/[\s,]+/).filter(Boolean);
+ const found=STATE.taco.filter(f=>terms.every(t=>normalize(f.nome).includes(t)));
+ const rank=f=>[normalize(f.nome).startsWith(terms[0])?0:1,f.nome.length];
+ return found.sort((a,b)=>{const ra=rank(a),rb=rank(b);return ra[0]-rb[0]||ra[1]-rb[1];})[0];
+}
 function renderFoods(){
  const list=$('foodList');list.textContent='';$('foodCount').textContent=`${STATE.foods.length} alimento(s)`;$('emptyMessage').style.display=STATE.foods.length?'none':'block';
  STATE.foods.forEach((it,idx)=>{
   const outer=document.createElement('div');outer.className='food-row';
   const top=document.createElement('div');top.className='food-top';const color=document.createElement('div');color.className='food-color';color.style.background=({"1":"#70b8ee","2":"#8f6e50","3":"#edaa6b","4":"#b96564","5":"#6fbc92","6":"#e5b84c","7":"#ecce79","8":"#bb90d5","9":"#f27991","10":"#e86d69","11":"#ed8f4a","12":"#e3a05b","13":"#ad7760","14":"#cfb97c","15":"#c76992","16":"#eac69a","17":"#ce5a5a","18":"#71b36d","19":"#e9d353","20":"#c8bda5","21":"#a28c64"}[it.class_id])||'#91a7a7';top.append(color);
   const info=document.createElement('div');info.style.minWidth='0';info.style.flex='1';const name=document.createElement('div');name.className='food-name';name.textContent=STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
-  const sub=document.createElement('div');sub.className='food-sub';sub.textContent=it.class_id?'⚠ Hipótese visual experimental · confira':'✓ Selecionado manualmente';info.append(name,sub);top.append(info);outer.append(top);
+  const sub=document.createElement('div');sub.className='food-sub';sub.textContent=it.class_id?`⚠ Hipótese visual experimental · ${it.cobertura_imagem_percent}% da foto · confira`:'✓ Selecionado manualmente';info.append(name,sub);top.append(info);outer.append(top);
   const controls=document.createElement('div');controls.className='food-controls';
   const grams=document.createElement('input');grams.type='number';grams.value=it.grams;grams.min='1';grams.max='2500';grams.step='5';grams.title='Quantidade em gramas';grams.setAttribute('aria-label',`Gramas de ${it.nome}`);grams.addEventListener('change',()=>{STATE.foods[idx].grams=Math.max(1,Math.min(2500,Number(grams.value)||1));recalc();});
   const selector=document.createElement('input');selector.type='search';selector.setAttribute('list','tacoOptions');selector.setAttribute('aria-label',`Corrigir alimento pela TACO: ${it.nome}`);selector.title='Digite qualquer nome da TACO para corrigir a sugestão da IA';selector.value=STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
   selector.addEventListener('change',()=>{const entry=foodLookup(selector.value);if(!entry){showStatus('analysisStatus','Não encontrei este alimento na TACO. Abra a tabela e pesquise.',true);return;}
-    STATE.foods[idx].taco_id=entry.id;STATE.foods[idx].nome=entry.nome;STATE.foods[idx].class_id=null;STATE.foods[idx].origem='manual';STATE.foods[idx].confianca=null;STATE.foods[idx].note='Alimento corrigido manualmente; confira o peso.';renderFoods();recalc();showStatus('analysisStatus',`Corrigido para ${entry.nome}.`);});
+    STATE.foods[idx].taco_id=entry.id;STATE.foods[idx].nome=entry.nome;STATE.foods[idx].class_id=null;STATE.foods[idx].origem='manual';STATE.foods[idx].score_nao_calibrado=null;STATE.foods[idx].note='Alimento corrigido manualmente; confira o peso.';renderFoods();recalc();showStatus('analysisStatus',`Corrigido para ${entry.nome}.`);});
   const remove=document.createElement('button');remove.textContent='×';remove.title='Remover alimento';remove.addEventListener('click',()=>{STATE.foods.splice(idx,1);renderFoods();recalc()});
   controls.append(grams,selector,remove);outer.append(controls);
   const note=document.createElement('div');note.className='food-note';note.textContent=it.note||'Confirme a massa e o preparo. A fotografia não mede gramas.';outer.append(note);
@@ -42,7 +58,7 @@ function renderVisionDiagnostics(items){
  const holder=$('visionDiagnostics');if(!holder)return;holder.replaceChildren();
  if(!items||!items.length){holder.textContent='Sem dados de diagnóstico.';return;}
  const lines=items.filter(d=>d.regiao_percent>0.05).map(d=>
-   `${d.classe_visual}: região ${d.regiao_percent.toFixed(1)}%, score ${d.score_medio_regiao.toFixed(2)} (limiar ${d.limiar})`);
+   `${d.classe_visual}: região ${d.regiao_percent.toFixed(1)}%, score não calibrado ${d.score_medio_regiao.toFixed(2)} (limiar ${d.limiar})`);
  holder.textContent=lines.length?lines.join('\n'):'Nenhuma região sugerida. A base de pesos está carregada, mas esta foto não produziu regiões válidas.';
 }
 async function analyze(){

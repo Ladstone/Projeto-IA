@@ -187,6 +187,6 @@ def main():
     # Test-score for classes actually represented; zeros for new brazil-only classes aren't included.
     relevant=[j for j in range(N_CLASS) if counts[j]>0]
     report={'train':len(tr),'validation':len(va),'test_myfood':len(test),'val_macro_iou':best,'myfood_test_present_classes_macro_iou':float(np.mean([tper[j] for j in relevant])),'test_perclass':{CLASS_LABELS[j+1]:round(float(tper[j]),3) for j in relevant},'notes':['Brazilian test_set consists only of unlabeled photographs: it has no pixel-wise ground truth and is not scored.','Brazilian labeled images were held out deterministically using SHA-1 grouping; 20% expected.','The MyFood test contains no ground-truth masks for Brazil-only classes; do not report 21-class test score on it.','Potential duplicate or near-duplicate photographs across datasets were not exhaustively checked.']}
-    (ROOT/'MODEL_EVALUATION_V4.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
+    (ROOT/'docs'/'METRICAS_ULTIMO_TREINO.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
 
 if __name__=='__main__':main()

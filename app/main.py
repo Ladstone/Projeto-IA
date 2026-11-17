@@ -6,7 +6,7 @@ import base64, json, sqlite3, threading
 from typing import Optional
 
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from fastapi import FastAPI,File,UploadFile,HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -57,7 +57,7 @@ try:
     import torch
     torch.set_num_threads(3)
     if MODEL.exists():vision=VisionService(MODEL)
-    else:model_error='Arquivo do modelo ainda não encontrado. Rode scripts/train_model.py.'
+    else:model_error='Arquivo do modelo ainda não encontrado. Rode scripts/train_unified.py.'
 except Exception as exc:
     model_error=f'Não foi possível carregar pesos: {exc}'
 db_init()
@@ -117,26 +117,55 @@ def post_recalculate(body:RecalculateRequest):
     try:return recalculate([b.model_dump() for b in body.items],profile_get())
     except ValueError as e:raise HTTPException(422,str(e))
 
+# Regiões menores que isto foram, nos testes com as fotos de exemplo, quase sempre
+# falsos positivos (manchas de 1-2% da imagem). Heurística, NÃO validada estatisticamente.
+MIN_REGION_FRACTION=0.03
+# Cobertura da imagem que corresponde à porção padrão da categoria. Heurística:
+# um item típico de prato feito ocupa cerca de 1/5 de uma foto de cima.
+REFERENCE_REGION_FRACTION=0.20
+
+def load_image(raw:bytes)->Image.Image:
+    """Abre a imagem enviada e aplica a orientação EXIF (fotos de celular).
+
+    Sem isso a rede analisa a foto deitada e a máscara não coincide com a
+    imagem que o navegador exibe (o navegador aplica a orientação EXIF).
+    """
+    try:
+        probe=Image.open(BytesIO(raw)); probe.verify()
+        image=ImageOps.exif_transpose(Image.open(BytesIO(raw))).convert('RGB')
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(413,'Resolução excessiva') from exc
+    except (UnidentifiedImageError,OSError,SyntaxError) as exc:
+        raise HTTPException(400,'Arquivo inválido; use JPEG, PNG ou WebP') from exc
+    if image.width*image.height>22_000_000:
+        raise HTTPException(413,'Resolução excessiva')
+    return image
+
+def suggest_grams(default_grams:float,region_fraction:float)->int:
+    """Porção inicial proporcional à área visível, limitada a 25%-150% da porção padrão.
+
+    A foto NÃO mede massa: é só um ponto de partida que o usuário deve corrigir.
+    """
+    scale=min(1.5,max(0.25,region_fraction/REFERENCE_REGION_FRACTION))
+    grams=int(round(default_grams*scale/5)*5)
+    cap=int(default_grams*1.5//5*5)  # arredonda o teto para baixo, para não ultrapassá-lo
+    return max(5,min(grams,cap))
+
 @app.post('/api/analyze')
 async def analyze(file:UploadFile=File(...)):
     """Segmentação local, sem serviços externos, atalhos ou lista fixa de resultados.
 
     Um pixel pode ter muitas probabilidades independentes; o overlay escolhe só
     a melhor classe elegível. Os candidatos são calculados para CADA imagem.
-    Os escores sigmoid NÃO são probabilidades calibradas de acerto.
+    Os escores sigmoid NÃO são probabilidades calibradas de acerto: como a região
+    só contém pixels acima do limiar da classe, o score médio é sempre >= limiar.
     """
     if vision is None:
         raise HTTPException(503, model_error or 'Modelo local indisponível')
     raw=await file.read()
     if len(raw)>8*1024*1024:
         raise HTTPException(413,'Imagem deve ter no máximo 8 MB')
-    try:
-        image=Image.open(BytesIO(raw)); image.verify()
-        image=Image.open(BytesIO(raw)).convert('RGB')
-        if image.width*image.height>22_000_000:
-            raise HTTPException(413,'Resolução excessiva')
-    except (UnidentifiedImageError,OSError) as exc:
-        raise HTTPException(400,'Arquivo inválido; use JPEG, PNG ou WebP') from exc
+    image=load_image(raw)
     with model_lock:
         mask,probs=vision.predict(image,dimension=vision.metadata.get('resolution',160))
 
@@ -145,24 +174,25 @@ async def analyze(file:UploadFile=File(...)):
     for class_id,record in FOOD_CLASS_MAP.items():
         region=mask==class_id
         frac=float(region.mean())
-        confidence=float(probs[class_id-1][region].mean()) if region.any() else 0.0
+        score=float(probs[class_id-1][region].mean()) if region.any() else 0.0
         threshold=vision.thresholds.get(class_id,0.5)
         candidates=float((probs[class_id-1]>=threshold).mean())
         diagnostics.append({
             'class_id':class_id,'classe_visual':record['nome'],
             'regiao_percent':round(frac*100,2),
             'pixels_acima_limiar_percent':round(candidates*100,2),
-            'score_medio_regiao':round(confidence,3),
+            'score_medio_regiao':round(score,3),
             'limiar':threshold,
         })
-        # Critérios mínimos de região e de escore. NÃO garantem correção semântica.
-        if frac<0.012 or confidence<0.35:
+        # Só a área mínima filtra. NÃO garante correção semântica.
+        if frac<MIN_REGION_FRACTION:
             continue
         detected.append({
             'class_id':class_id,'nome':record['nome'],'taco_id':record['taco_id'],
-            'grams':record['grams'],'note':record['note'],
+            'grams':suggest_grams(record['grams'],frac),'porcao_padrao_g':record['grams'],
+            'note':record['note']+' Porção inicial estimada pela área visível; informe o peso real.',
             'origem':'modelo_local',
-            'confianca':round(confidence,2),
+            'score_nao_calibrado':round(score,2),
             'cobertura_imagem_percent':round(frac*100,1),
         })
     detected.sort(key=lambda x:x['cobertura_imagem_percent'],reverse=True)
