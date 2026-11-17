@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
-from .vision import VisionService, LABEL_COLORS, CLASS_LABELS
+from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
@@ -117,9 +117,8 @@ def post_recalculate(body:RecalculateRequest):
     try:return recalculate([b.model_dump() for b in body.items],profile_get())
     except ValueError as e:raise HTTPException(422,str(e))
 
-# Regiões menores que isto foram, nos testes com as fotos de exemplo, quase sempre
-# falsos positivos (manchas de 1-2% da imagem). Heurística, NÃO validada estatisticamente.
-MIN_REGION_FRACTION=0.03
+# MIN_REGION_FRACTION (área mínima de detecção) fica em app/vision.py para que o app
+# e scripts/evaluate_models.py usem exatamente a mesma regra.
 # Cobertura da imagem que corresponde à porção padrão da categoria. Heurística:
 # um item típico de prato feito ocupa cerca de 1/5 de uma foto de cima.
 REFERENCE_REGION_FRACTION=0.20
@@ -167,7 +166,7 @@ async def analyze(file:UploadFile=File(...)):
         raise HTTPException(413,'Imagem deve ter no máximo 8 MB')
     image=load_image(raw)
     with model_lock:
-        mask,probs=vision.predict(image,dimension=vision.metadata.get('resolution',160))
+        mask,probs=vision.predict(image)
 
     detected=[]
     diagnostics=[]

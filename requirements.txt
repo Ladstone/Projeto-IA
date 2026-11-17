@@ -5,3 +5,6 @@ pydantic>=2,<3
 pillow>=10,<13
 numpy>=1.26,<3
 torch>=2.2,<3
+# Modelo v2 (MobileNetV3 + LR-ASPP). Use a versão casada com o torch instalado,
+# ex.: torch 2.15.0 + torchvision 0.29.2 (índice CPU: https://download.pytorch.org/whl/cpu)
+torchvision>=0.17,<1

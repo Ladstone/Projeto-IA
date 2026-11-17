@@ -15,3 +15,6 @@ app/data/profile.sqlite3-*
 *.zip
 # Checkpoints de treinamentos exploratórios: não comitar novos arquivos sem revisão
 models/checkpoint_*.pt
+
+# Execuções de treino v2 (checkpoints por época, logs): não comitar
+models/runs/
