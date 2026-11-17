@@ -1,0 +1,17 @@
+# Ambiente local
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+*.log
+.DS_Store
+Thumbs.db
+.env
+# Banco de metas é gerado localmente
+app/data/profile.sqlite3
+app/data/profile.sqlite3-*
+# Os ZIPs originais são grandes e devem ser obtidos separadamente
+*.zip
+# Checkpoints de treinamentos exploratórios: não comitar novos arquivos sem revisão
+models/checkpoint_*.pt

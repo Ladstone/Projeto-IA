@@ -1,0 +1,29 @@
+{
+  "project": "PratoMetria",
+  "visual_model": "FoodUNet 21 categorias, pesos incluídos",
+  "datasets": [
+    {
+      "name": "MyFood Dataset",
+      "train": 750,
+      "val": 250,
+      "test": 250,
+      "supervision": "máscaras multiclasse por imagem"
+    },
+    {
+      "name": "Brazilian Food Images",
+      "train": 681,
+      "val": 234,
+      "test_images_without_masks": 160,
+      "supervision": "uma máscara binária de uma classe por imagem"
+    }
+  ],
+  "trained_weights": "models/unified_21class.pt",
+  "dataset_archives_included": false,
+  "nutrition": {
+    "source": "TACO 4ª ed., NEPA/UNICAMP (2011)",
+    "entries": 597,
+    "fields": 26,
+    "contains_all_table1": true,
+    "tables2_and3": "PDF de referência, não CSV"
+  }
+}

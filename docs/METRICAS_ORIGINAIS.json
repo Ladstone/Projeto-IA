@@ -1,0 +1,23 @@
+{
+  "train": 1431,
+  "validation": 484,
+  "test_myfood": 250,
+  "val_macro_iou": 0.5304838801882242,
+  "myfood_test_present_classes_macro_iou": 0.5275269130690129,
+  "test_perclass": {
+    "Arroz": 0.539,
+    "Feijão": 0.631,
+    "Frango": 0.353,
+    "Carne bovina": 0.547,
+    "Salada": 0.652,
+    "Ovo": 0.483,
+    "Macarrão": 0.529,
+    "Maçã": 0.487
+  },
+  "notes": [
+    "Brazilian test_set consists only of unlabeled photographs: it has no pixel-wise ground truth and is not scored.",
+    "Brazilian labeled images were held out deterministically using SHA-1 grouping; 20% expected.",
+    "The MyFood test contains no ground-truth masks for Brazil-only classes; do not report 21-class test score on it.",
+    "Potential duplicate or near-duplicate photographs across datasets were not exhaustively checked."
+  ]
+}

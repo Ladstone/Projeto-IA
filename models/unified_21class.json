@@ -1,0 +1,36 @@
+{
+  "model": "FoodUNet sigmoid independent heads",
+  "datasets": [
+    "MyFood Dataset",
+    "Brazilian Food Images"
+  ],
+  "classes": 21,
+  "resolution": 160,
+  "thresholds": {
+    "1": 0.6,
+    "2": 0.6,
+    "3": 0.6,
+    "4": 0.6,
+    "5": 0.6,
+    "6": 0.6,
+    "7": 0.6,
+    "8": 0.6,
+    "9": 0.6,
+    "10": 0.6,
+    "11": 0.6,
+    "12": 0.6,
+    "13": 0.5,
+    "14": 0.3,
+    "15": 0.6,
+    "16": 0.6,
+    "17": 0.6,
+    "18": 0.6,
+    "19": 0.6,
+    "20": 0.6,
+    "21": 0.6
+  },
+  "val_macro_iou": 0.5304838801882242,
+  "epochs_trained": 5,
+  "train_size": 1431,
+  "val_size": 484
+}
