@@ -1,6 +1,6 @@
 /* PratoMetria — estilos da interface
    1. Tokens   2. Base   3. Layout   4. Componentes   5. Seções   6. Diálogos   7. Responsivo
-   Uma única cor de destaque (--primary). Âmbar só para o aviso de IA experimental. */
+   Uma única cor de destaque (--primary). */
 
 /* 1. Tokens ---------------------------------------------------------------- */
 :root {
@@ -115,9 +115,6 @@ button { cursor: pointer; }
 .badge-manual { background: var(--surface-2); color: var(--muted); }
 
 /* 5. Seções ---------------------------------------------------------------- */
-.notice { display: flex; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--warn-line); background: var(--warn-bg); color: var(--warn); border-radius: var(--r-md); font-size: var(--fs-xs); }
-.notice strong { display: block; font-size: var(--fs-sm); }
-.notice-icon { font-size: var(--fs-md); line-height: 1.2; }
 
 /* Foto */
 .drop { position: relative; height: 340px; border: 2px dashed var(--line); border-radius: var(--r-md); background: var(--surface-2);
