@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
 from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION
+from .unified_classes import RECIPES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
@@ -194,14 +195,23 @@ async def analyze(file:UploadFile=File(...)):
         # Só a área mínima filtra. NÃO garante correção semântica.
         if frac<MIN_REGION_FRACTION:
             continue
-        detected.append({
-            'class_id':class_id,'nome':record['nome'],'taco_id':record['taco_id'],
-            'grams':suggest_grams(record['grams'],frac),'porcao_padrao_g':record['grams'],
-            'note':record['note']+' Porção inicial estimada pela área visível; informe o peso real.',
-            'origem':'modelo_local',
-            'score_nao_calibrado':round(score,2),
-            'cobertura_imagem_percent':round(frac*100,1),
-        })
+        base={
+            'class_id':class_id,'porcao_padrao_g':record['grams'],'origem':'modelo_local',
+            'score_nao_calibrado':round(score,2),'cobertura_imagem_percent':round(frac*100,1),
+        }
+        total=suggest_grams(record['grams'],frac)
+        if class_id in RECIPES:
+            parts=RECIPES[class_id]
+            recipe=', '.join(f"{round(f*100)}% {nome}" for nome,_,f in parts)
+            for nome,taco_id,f in parts:
+                detected.append({**base,'nome':f"{record['nome']} — {nome}",'taco_id':taco_id,
+                    'grams':max(1,round(total*f)),
+                    'note':(f"Parte do {record['nome'].lower()} ({total} g no total; receita aproximada: {recipe}). "
+                            'A TACO não tem este preparo pronto; ajuste ou remova cada ingrediente. '
+                            'Porção estimada pela área visível; informe o peso real.')})
+            continue
+        detected.append({**base,'nome':record['nome'],'taco_id':record['taco_id'],'grams':total,
+            'note':record['note']+'. Porção inicial estimada pela área visível; informe o peso real.'})
     detected.sort(key=lambda x:x['cobertura_imagem_percent'],reverse=True)
     diagnostics.sort(key=lambda x:x['regiao_percent'],reverse=True)
     overlay=None

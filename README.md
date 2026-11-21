@@ -127,7 +127,6 @@ Cuidados ao interpretar:
 2. **Reforçar classes com poucos exemplos** (Milho, Salada com maionese, Mandioca, Cenoura, Batata frita, entre outras). Elas precisam de mais fotos anotadas.
 3. **Revisar limiares extremos.** No v2, os limiares escolhidos na validação ficaram muito baixos para Tomate (0,15) e Farofa (0,05), e em 0,90–0,95 para várias outras classes, em parte por falta de exemplos.
 4. **Avaliar com fotos reais** de pratos, tiradas com permissão e anotadas, que não venham dos datasets.
-5. **Pequenos ajustes de texto:** falta um ponto antes de "Porção inicial estimada…" na nota de cada alimento (`app/main.py`).
 
 ## Antes de entregar ao professor
 

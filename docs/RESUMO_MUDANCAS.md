@@ -23,6 +23,7 @@ Comparação da versão original (commit `7a9a682`) com a versão atual da `main
 | O filtro de "confiança" foi removido; o campo virou `score_nao_calibrado` | O filtro nunca descartava nada, e o valor sempre parecia alto |
 | "Massa com molho vermelho" passou a usar a TACO #37 (massa cozida), com sugestão de somar a #159 (molho de tomate) | Antes usava a bolonhesa, que tem carne |
 | Mensagens de erro legíveis e busca TACO ordenada por relevância | Usabilidade |
+| "Purê" detectado vira três itens da TACO: batata cozida (#91, 80%), leite integral (#458, 16%) e manteiga com sal (#261, 4%) — `RECIPES` em `app/unified_classes.py` | A TACO não tem purê de batata; só batata cozida subestimava gordura e calorias |
 
 **Arquivos:** `app/main.py`, `app/unified_classes.py`, `app/static/app.js`, `tests/test_fase_a.py`.
 
@@ -153,7 +154,6 @@ O app lê a arquitetura pelo `.json`, então não é preciso mudar código. Com 
 | Mais fotos anotadas para Milho, Macarrão e classes com poucos exemplos (Salada com maionese, Mandioca, Cenoura, Batata frita) | IA + Dados |
 | Montar um conjunto de **fotos reais** de pratos (com permissão) e anotá-lo para avaliar | Dados / Qualidade |
 | Revisar os limiares que ficaram nas pontas (Tomate 0,15; Farofa 0,05; vários em 0,90–0,95) | IA |
-| Corrigir pequenos textos: falta um ponto antes de "Porção inicial…" na nota de cada alimento (`app/main.py`) | Backend |
 | Conferir licenças e montar o roteiro da apresentação (seção 8) | Qualidade + Apresentação |
 
 ## 8. Avisos para a apresentação

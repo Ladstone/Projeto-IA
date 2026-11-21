@@ -19,7 +19,7 @@ CLASSES={
  13:('Bife à milanesa',340,130,'Contra-filé à milanesa como aproximação'),
  14:('Farofa',131,40,'Farofa de mandioca temperada como aproximação'),
  15:('Beterraba',97,60,'Beterraba cozida como aproximação'),
- 16:('Purê',91,115,'Batata inglesa cozida como PROXY: purê com leite/manteiga tem outros nutrientes'),
+ 16:('Purê',91,115,'Sem item na TACO: lançado como batata cozida + leite integral + manteiga (ver RECIPES)'),
  17:('Massa com molho vermelho',37,140,'Massa fresca cozida como PROXY (a TACO não tem massa ao sugo): acrescente "Tomate, molho industrializado" (#159) para o molho'),
  18:('Repolho',149,55,'Repolho branco cru como aproximação'),
  19:('Milho',45,70,'Milho verde enlatado e drenado como aproximação'),
@@ -32,6 +32,12 @@ CLASS_LABELS={k:v[0] for k,v in CLASSES.items()}
 PALETTE=['#70b8ee','#8f6e50','#edaa6b','#b96564','#6fbc92','#e5b84c','#ecce79','#bb90d5','#f27991','#e86d69','#ed8f4a','#e3a05b','#ad7760','#cfb97c','#c76992','#eac69a','#ce5a5a','#71b36d','#e9d353','#c8bda5','#a28c64']
 LABEL_COLORS={k:PALETTE[k-1] for k in CLASSES}
 FOOD_CLASS_MAP={k:{'nome':a[0],'taco_id':a[1],'grams':a[2],'note':a[3]} for k,a in CLASSES.items()}
+# Preparos que a TACO não tem como item único: a classe vira vários itens da TACO.
+# Frações em massa de uma receita caseira típica, editáveis pelo usuário.
+# Purê: 1 kg de batata cozida + 200 g de leite integral + 50 g de manteiga (~1250 g) -> 80/16/4.
+RECIPES={
+ 16:(('batata',91,0.80),('leite integral',458,0.16),('manteiga com sal',261,0.04)),
+}
 BRAZIL_LABELS={
  'rice':1,'beans':2,'chicken':3,'beef':4,'salad':5,'fries':6,'egg':7,'noodles':8,
  'tomato':10,'carrot':11,'pumpkin':12,'milanesesteak':13,'farofa':14,'beet':15,
