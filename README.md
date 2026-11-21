@@ -56,14 +56,13 @@ Os dois ZIPs originais somam centenas de MB e **não estão no repositório**. �
 
 ## Reproduzir/continuar treinamento
 
-Com os dois ZIPs disponíveis:
+Com os dois ZIPs disponíveis, confira primeiro se eles estão íntegros:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/verify_datasets.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip"
-.\.venv\Scripts\python.exe scripts/train_unified.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip" --epochs 9 --dimension 160
 ```
 
-A segunda linha **substitui o checkpoint** `models/unified_21class.pt`; faça uma cópia antes de treinar. O peso que acompanha este ZIP foi escolhido por validação em um treino de 5 épocas, não em 9 épocas completas. Uma nova execução não necessariamente reproduz o mesmo resultado.
+Os comandos de treino, exportação e avaliação do v2 estão em **[A fazer](#a-fazer)**, item 1. O treino **não** substitui o modelo do app: ele grava em `models/runs/v2/`, e `export_v2.py` gera `models/unified_21class_v2.pt`. Uma nova execução não necessariamente reproduz o mesmo resultado. O script do v1 (`scripts/train_unified.py`) continua no repositório só como referência; ele **sobrescreve** `models/unified_21class.pt`, então não o use sem fazer uma cópia.
 
 ## Estrutura do código
 

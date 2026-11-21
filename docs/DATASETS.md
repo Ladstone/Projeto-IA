@@ -13,9 +13,12 @@ O comando `python scripts/verify_datasets.py --myfood ... --brazil ...` foi exec
 - **MyFood:** imagens `train/*.png`, `val/*.png`, `test/*.png` com anotações em `train_ann`, `val_ann`, `test_ann`. O código converte os rótulos 2 a 10 para IDs comuns; o rótulo 1 indica região ignorada.
 - **Brazilian Food Images:** pastas como `training_set/chicken/` com pares de arquivos imagem `chicken0000.jpg` e máscara `chicken0000_.jpg`. As máscaras são binárias e anotam apenas **a classe daquela pasta** em um prato que pode conter outros alimentos.
 - **Normalização:** `app/unified_classes.py` faz o mapeamento das classes para 21 categorias visuais, unificando, por exemplo, ovo frito/cozido na classe `Ovo`.
-- **Perda supervisionada parcial:** em fotos brasileiras, apenas a cabeça da classe anotada contribui para BCE/Dice. Isso evita ensinar que outro alimento visível, mas não anotado, é necessariamente fundo.
-- **Split:** no conjunto brasileiro, pares de treino/validação são particionados deterministicamente por SHA1 do conteúdo da foto. Isso protege contra arquivos idênticos nos dois grupos; **não prova** ausência de fotos quase duplicadas.
-- **Treinamento real:** rede `FoodUNet` com 21 saídas sigmoid, pesos salvos em `models/unified_21class.pt`. O método de inferência é `VisionService.predict` em `app/vision.py`. `scripts/train_unified.py` lê e processa **ambas** as fontes em uma única execução de treinamento.
+- **Supervisão por pixel (v2, `scripts/data_v2.py`):**
+  - MyFood: as máscaras anotam todos os alimentos da foto. Cada pixel anotado é positivo para sua classe e negativo para as outras 20; o fundo é negativo para as 21.
+  - Brasileiro: só um alimento é anotado. Pixels da máscara são positivos para a classe e negativos para as outras 20; pixels fora da máscara são negativos **só para a classe anotada** e desconhecidos para as demais. Isso evita ensinar que outro alimento visível, mas não anotado, é fundo.
+  - Imagens sintéticas sem comida (cerca de 8% por época): negativas para as 21 classes.
+- **Split:** no conjunto brasileiro, pares de treino/validação são particionados deterministicamente por SHA-1 do conteúdo da foto. No v2, a validação antiga (234 pares) é dividida ao meio, por outro trecho do hash, em **validação nova** e **teste novo**, para que nenhum modelo tenha treinado nas fotos de teste. Depois da remoção de quase duplicatas, restam 75 fotos brasileiras na validação e 78 no teste. Fotos quase duplicadas das de treino são removidas da validação e do teste (os próprios datasets repetem fotos entre divisões).
+- **Treinamento real:** o modelo ativo (v2) é MobileNetV3-Large + LR-ASPP com 21 saídas sigmoid, treinado por `scripts/train_v2.py`, que lê **ambas** as fontes direto dos ZIPs em uma única execução. Os pesos ficam em `models/unified_21class.pt` e a inferência é `VisionService.predict` em `app/vision.py`. O script antigo do v1 (`scripts/train_unified.py`, rede `FoodUNet`) continua no repositório só como referência.
 
 ### Classes brasileiras anotadas no treino (quantidade de pares)
 

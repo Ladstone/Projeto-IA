@@ -1,17 +1,28 @@
 # Avaliação e limitações verificadas
 
-### Modelo incluído
+### Modelo incluído (v2, ativo desde 21/11/2026)
 
-Arquitetura: U-Net pequena com saídas sigmoid (21 classes). Resolução de inferência 160 × 160. Treinamento com duas fontes de imagens, inicialização parcial dos pesos de MyFood e melhor checkpoint selecionado por validação.
+Arquitetura: MobileNetV3-Large pré-treinada no ImageNet + cabeça LR-ASPP, 21 saídas sigmoid, inferência em 224 × 224. Treino de 20 épocas com as duas fontes de imagens, supervisão negativa por pixel e cerca de 8% de imagens sintéticas sem comida. A época (16) e os limiares por classe foram escolhidos **só na validação**; o teste foi usado uma única vez. Detalhes em `docs/RESUMO_MUDANCAS.md` e relatório completo em `docs/METRICAS_V2_COMPLETO.json`.
 
-| Medida | Resultado reportado no treinamento anterior |
-|---|---:|
-| IoU médio em validação conjunta, apenas classes com máscara disponível | **0,5305** |
-| IoU médio no teste MyFood, 8 categorias unificadas presentes | **0,5275** |
-| IoU no teste MyFood para frango | **0,353** |
-| Fotos do conjunto brasileiro de teste anotadas para métrica | **0** |
+| Medida no teste (mesma regra de detecção do app) | v1 | v2 piloto | v2 |
+|---|---:|---:|---:|
+| MyFood (222 fotos): F1 de presença, macro de 8 classes | 0,35 | 0,89 | **0,94** |
+| MyFood: falsos positivos por imagem | 2,84 | 0,19 | **0,10** |
+| MyFood: pratos 100% corretos | 6% | 78% | **88%** |
+| MyFood: fundo marcado como comida | 43% | 9% | **5%** |
+| Brasileiro (78 fotos): IoU médio da classe anotada | 0,19 | 0,48 | **0,74** |
+| Brasileiro: pixels anotados na classe certa | 35% | 65% | **82%** |
+| Imagens sem comida (120 sintéticas): com detecção espúria | 89% | 0% | **0%** |
 
-**Interpretação obrigatória:** IoU médio 0,53 NÃO significa 53% de acerto das refeições, nem demonstra que os 21 alimentos possam ser identificados confiavelmente em qualquer fotografia. A validação brasileira só avalia a classe explicitamente anotada por par; a taxa de falsos positivos de outras classes **não foi medida de modo abrangente**. A rede produz falsos positivos e confusões em pratos desconhecidos. No protótipo, uma foto de peito de frango já foi classificada como arroz/feijão; não foi comprovada correção desse problema.
+**Interpretação obrigatória:**
+- As fotos de teste vêm das **mesmas fontes do treino** (quase duplicatas removidas). **Não há avaliação com fotos reais de usuários**, então esses números não garantem o desempenho em fotos de celular.
+- No conjunto brasileiro, cada classe tem de **1 a 8 fotos de teste**: os números por classe são indicativos, não conclusivos. As classes mais fracas são Milho (IoU 0,44) e Macarrão (0,60).
+- "Pratos 100% corretos" mede presença/ausência de cada categoria, não a quantidade nem o tipo de preparo.
+- Os scores são saídas sigmoid **não calibradas**; não devem ser lidos como probabilidade de acerto.
+
+#### Histórico: métrica antiga do v1
+
+O v1 (U-Net pequena, 160 × 160, `models/unified_21class_v1.pt`) foi descrito originalmente com IoU médio de 0,53 na validação e no teste MyFood. Essa métrica avaliava só a classe anotada de cada foto e **ignorava falsos positivos** de outras classes, por isso não é comparável com a tabela acima. Na métrica atual o v1 marca alimentos inexistentes em 94% das fotos do MyFood e classificava uma foto de peito de frango como arroz/feijão.
 
 ### Entradas diferentes, previsões diferentes — mas não necessariamente corretas
 
@@ -26,4 +37,4 @@ O endpoint `POST /api/analyze` executa o modelo para cada foto, escolhe classes 
 
 ### Melhorias para o grupo
 
-Prioridade 1: avaliações de falso positivo por refeição completa. Prioridade 2: segmentação de melhor arquitetura/resolução e anotação de classes ausentes. Prioridade 3: identificação do modo de preparo e validação da porção. Prioridade 4: documentação de métricas e abordagem de incerteza.
+Prioridade 1: avaliar com **fotos reais** de pratos completos, tiradas com permissão e anotadas. Prioridade 2: mais fotos anotadas para as classes com poucos exemplos (Milho, Macarrão, Salada com maionese, Mandioca, Cenoura, Batata frita) e revisão dos limiares que ficaram nas pontas da faixa (Tomate 0,15; Farofa 0,05; vários em 0,90–0,95). Prioridade 3: identificação do modo de preparo e validação da porção (hoje estimada pela área da foto). Prioridade 4: calibração dos scores e comunicação da incerteza.

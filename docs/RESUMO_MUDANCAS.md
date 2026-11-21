@@ -1,0 +1,172 @@
+# PratoMetria — resumo das mudanças
+
+Comparação da versão original (commit `7a9a682`) com a versão atual da `main`. Atualizado em 21/11/2026.
+
+## 1. Visão geral
+
+- **O projeto:** protótipo acadêmico. O usuário envia a foto de um prato, uma rede neural local sugere os alimentos (21 categorias visuais), o usuário confere nomes e gramas, e a TACO (597 alimentos) dá os nutrientes. O resultado é comparado com as metas do usuário.
+- **O que mudou:** foram três frentes.
+  - **Fase A:** correções no pipeline.
+  - **Frontend novo.**
+  - **Fase B:** um novo modelo de IA (v2), treinado de outro jeito e avaliado em fotos separadas.
+- **Estado:** tudo está na `main` e no GitHub. O app usa o **v2**, treinado por 20 épocas. O v2 piloto (3 épocas) e o v1 estão guardados como backup. Os testes passam (32 passam com os datasets disponíveis; sem eles, 2 são pulados).
+- **É um protótipo:** a identificação continua experimental.
+
+## 2. O que mudou
+
+### Fase A — correções sem retreinar
+| O que | Por quê |
+|---|---|
+| A orientação EXIF é aplicada antes da IA | Fotos de celular chegavam deitadas, e a máscara não batia com a foto exibida |
+| A porção inicial é proporcional à área (20% da foto = porção padrão, limitada entre 25% e 150%) | Uma mancha de 1–2% da foto entrava com a porção cheia e inflava as kcal |
+| Regiões com menos de 3% da foto são descartadas | Eram quase sempre falsos positivos |
+| O filtro de "confiança" foi removido; o campo virou `score_nao_calibrado` | O filtro nunca descartava nada, e o valor sempre parecia alto |
+| "Massa com molho vermelho" passou a usar a TACO #37 (massa cozida), com sugestão de somar a #159 (molho de tomate) | Antes usava a bolonhesa, que tem carne |
+| Mensagens de erro legíveis e busca TACO ordenada por relevância | Usabilidade |
+
+**Arquivos:** `app/main.py`, `app/unified_classes.py`, `app/static/app.js`, `tests/test_fase_a.py`.
+
+### Frontend novo
+O resumo nutricional ficava abaixo do catálogo de 597 alimentos e havia 4 avisos competindo entre si.
+
+**O que mudou:**
+- Agora a foto e os alimentos ficam à esquerda, e o resumo com as recomendações fica fixo à direita.
+- As metas e a Tabela TACO viraram diálogos abertos por botões no cabeçalho.
+- Cada alimento sugerido pela IA tem um selo "Sugestão da IA". O selo "IA local · experimental" do cabeçalho e o aviso amarelo "A identificação por IA é experimental" foram removidos em 17/11/2026.
+- No celular a página vira uma coluna só, com uma barra de kcal fixa no rodapé.
+- Não houve mudança no backend nem na API.
+- Foi verificado com 20 checagens automáticas em navegador (desktop e celular).
+
+**Arquivos:** `app/static/index.html`, `app/static/styles.css` (cores e espaçamentos ficam em variáveis no topo), `app/static/app.js`.
+
+### Fase B — modelo v2
+O v1 errava de um jeito sistemático:
+- Uma imagem marrom lisa virava "Feijão" com score 0,95, e ruído aleatório virava "Arroz".
+- Ele não achava frango na foto de exemplo.
+
+**Causa:** no treino, cada foto só ensinava a categoria anotada. Nada ensinava a rede o que *não* era cada alimento. Além disso, as máscaras do MyFood anotam todos os alimentos da foto, e o treino antigo ignorava isso.
+
+**O que foi feito:**
+- **Modelo pré-treinado:** MobileNetV3-Large (ImageNet) com cabeça LR-ASPP, em 224 px.
+- **Supervisão negativa:** um pixel anotado como frango também ensina "não é arroz, não é feijão…".
+- **Imagens sem comida:** cerca de 8% do treino são imagens sintéticas sem comida.
+- **Separação dos dados:**
+  - O teste brasileiro novo foi tirado da validação antiga, de modo que nenhum dos dois modelos treinou nele.
+  - Fotos quase idênticas às do treino foram removidas da validação e do teste. Os próprios datasets têm a mesma foto repetida em divisões diferentes.
+- **Limiares por classe** escolhidos **só na validação**. O teste foi usado uma única vez para cada modelo.
+- **Treino** com checkpoint a cada época, log em arquivo e retomada.
+- **Primeiro um piloto de 3 épocas** (16/11/2026); depois o **treino completo de 20 épocas** (21/11/2026, 99 min em CPU). A melhor época na validação foi a 16, e é ela que o app usa.
+
+**Arquivos:**
+- Modelo e predição: `app/vision.py`
+- Dados, divisão e duplicatas: `scripts/data_v2.py`
+- Treino: `scripts/train_v2.py`
+- Exportação: `scripts/export_v2.py`
+- Avaliação: `scripts/evaluate_models.py`
+- Modelos: `models/` (`unified_21class.*` = ativo; `unified_21class_v2.*`, `unified_21class_v2_piloto.*` e `unified_21class_v1.*` = cópias de cada versão)
+- Testes: `tests/test_modelos.py`
+
+## 3. Resultados no teste: v1 × v2 piloto × v2
+
+Mesmo teste para os três, com a mesma regra de detecção do app. Fonte: `docs/METRICAS_V2_COMPLETO.json` (o relatório só do piloto continua em `docs/METRICAS_PILOTO_V2.json`).
+
+| Métrica | v1 | v2 piloto | **v2 (ativo)** |
+|---|---:|---:|---:|
+| MyFood (222 fotos): F1 de presença | 0,35 | 0,89 | **0,94** |
+| MyFood: falsos positivos por imagem | 2,84 | 0,19 | **0,10** |
+| MyFood: imagens com algum falso positivo | 94% | 16% | **8%** |
+| MyFood: pratos 100% corretos | 6% | 78% | **88%** |
+| MyFood: fundo marcado como comida | 43% | 9% | **5%** |
+| Brasileiro (78 fotos): IoU médio da classe anotada | 0,19 | 0,48 | **0,74** |
+| Brasileiro: pixels anotados na classe certa | 35% | 65% | **82%** |
+| Imagens sem comida (120 sintéticas): com detecção falsa | 89% | 0% | **0%** |
+
+O v2 é melhor que o piloto em todas as métricas e em todas as classes. Destaques no conjunto brasileiro (IoU): Beterraba 0,06 → 0,64, Milho 0,03 → 0,44, Bife à milanesa 0,36 → 0,82, Tomate 0,49 → 0,85. Arroz, Salada e Massa com molho, que tinham piorado no piloto, voltaram ao nível do v1 ou acima.
+
+**Ressalvas obrigatórias:**
+- As fotos de teste vêm **dos próprios datasets** (MyFood e Brazilian Food Images). **Não há nenhuma avaliação com fotos reais de usuários.**
+- No conjunto brasileiro, **todas as classes têm de 1 a 8 fotos de teste**, e no MyFood a Maçã tem 14. Nessas classes, uma foto muda muito o resultado.
+- **As classes mais fracas do v2** são Milho (IoU 0,44) e Macarrão no conjunto brasileiro (0,60).
+- Os limiares de Tomate (0,15) e Farofa (0,05) ficaram muito baixos, e vários outros ficaram em 0,90–0,95, nas pontas da faixa testada (0,05–0,95), em parte por falta de exemplos na validação.
+- O IoU de 0,53 do v1 que aparece nos documentos antigos usava outra métrica, que ignorava falsos positivos. Ele não é comparável com esta tabela.
+
+## 4. Como rodar do zero (PowerShell, Python 3.11+)
+
+```powershell
+git clone https://github.com/Ladstone/Projeto-IA.git
+cd Projeto-IA
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+Abra http://127.0.0.1:8000.
+
+**Testes:**
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
+```
+O resultado esperado é **30 passam e 2 são pulados**. Os 2 pulados precisam dos ZIPs dos datasets; com eles, passam os 32.
+
+## 5. Branches e como trocar de modelo
+
+Só existe a branch **`main`**, no computador e no GitHub. As branches de trabalho (`fase-a-correcoes`, `frontend-redesign`, `fase-b-modelo`, `integracao`) já tinham sido incorporadas à `main` e foram apagadas em 17/11/2026.
+
+**Para voltar ao piloto ou ao v1:** copie os arquivos do backup por cima do modelo ativo.
+```powershell
+# piloto
+Copy-Item models\unified_21class_v2_piloto.pt models\unified_21class.pt
+Copy-Item models\unified_21class_v2_piloto.json models\unified_21class.json
+# v1
+Copy-Item models\unified_21class_v1.pt models\unified_21class.pt
+Copy-Item models\unified_21class_v1.json models\unified_21class.json
+# voltar ao v2
+Copy-Item models\unified_21class_v2.pt models\unified_21class.pt
+Copy-Item models\unified_21class_v2.json models\unified_21class.json
+```
+O app lê a arquitetura pelo `.json`, então não é preciso mudar código. Com outro modelo ativo, `tests/test_modelos.py` vai falhar, porque ele confere que o ativo é o v2 de 20 épocas; com o v1, os testes de imagem marrom e de ruído também falham.
+
+## 6. Como treinar de novo
+
+**Datasets** (não estão no repositório):
+- `MyFood Dataset.zip`: **[link a preencher pela equipe]**
+- `Brazilian food images.zip`: **[link a preencher pela equipe]**
+
+**Comandos:**
+```powershell
+.\.venv\Scripts\python.exe scripts/verify_datasets.py --myfood "<caminho>\MyFood Dataset.zip" --brazil "<caminho>\Brazilian food images.zip"
+.\.venv\Scripts\python.exe scripts/train_v2.py --myfood "<caminho>\MyFood Dataset.zip" --brazil "<caminho>\Brazilian food images.zip" --epochs 20 --run-dir models/runs/v2
+.\.venv\Scripts\python.exe scripts/export_v2.py --run-dir models/runs/v2 --out models/unified_21class_v2.pt
+.\.venv\Scripts\python.exe scripts/evaluate_models.py --myfood "<...>" --brazil "<...>" --model v1=models/unified_21class_v1.pt --model piloto=models/unified_21class_v2_piloto.pt --model v2=models/unified_21class_v2.pt --out docs/METRICAS_V2_COMPLETO.json
+```
+
+**Tempo medido em CPU** (Ryzen 5 5500U, sem GPU): **cerca de 4,9 min por época**. O treino de 20 épocas levou **99 min**; a avaliação dos três modelos leva cerca de 1,5 min.
+
+**Se o treino parar:** rode o mesmo comando, e ele retoma da última época concluída. Os checkpoints ficam em `models/runs/` (cerca de 300 MB), que não vai para o git.
+
+**O `export_v2.py` não sobrescreve o modelo do app.** Trocar o modelo ativo é uma decisão da equipe, depois de comparar no mesmo teste. A troca para o v2 foi aprovada em 21/11/2026.
+
+## 7. Próximas etapas e divisão sugerida
+
+| Tarefa | Quem |
+|---|---|
+| Mais fotos anotadas para Milho, Macarrão e classes com poucos exemplos (Salada com maionese, Mandioca, Cenoura, Batata frita) | IA + Dados |
+| Montar um conjunto de **fotos reais** de pratos (com permissão) e anotá-lo para avaliar | Dados / Qualidade |
+| Revisar os limiares que ficaram nas pontas (Tomate 0,15; Farofa 0,05; vários em 0,90–0,95) | IA |
+| Corrigir pequenos textos: falta um ponto antes de "Porção inicial…" na nota de cada alimento (`app/main.py`) | Backend |
+| Conferir licenças e montar o roteiro da apresentação (seção 8) | Qualidade + Apresentação |
+
+## 8. Avisos para a apresentação
+
+**Não afirmar:**
+- que a IA acerta qualquer refeição;
+- que a foto mede gramas: a porção é uma estimativa pela área e deve ser corrigida;
+- que a rede reconhece 597 alimentos: são 21 categorias visuais, e a TACO entra depois;
+- que as métricas valem para fotos reais;
+- que as recomendações são orientação clínica.
+
+**Licenças:**
+- **Fotos de exemplo** (`app/static/examples/`): a licença ainda não foi verificada. Se não for possível confirmar, removam as fotos e os botões de exemplo antes de publicar.
+- **Brazilian Food Images:** segundo a equipe, a licença é **CC BY 4.0**, que exige citar o autor. Isso ainda **não está registrado no repositório**: incluir a referência e o autor (**[a preencher]**) no README e na apresentação.
+- **MyFood:** a licença ainda não foi verificada.
+- **TACO:** citar NEPA/UNICAMP, 4ª ed., 2011.
