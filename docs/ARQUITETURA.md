@@ -4,6 +4,9 @@
 Upload da foto (HTML/JS)
        |
        v
+Recorte no prato (sugerido por POST /api/crop-suggestion, editável; opcional)
+       |
+       v
 POST /api/analyze (FastAPI)
        |
        v
@@ -42,7 +45,7 @@ GET/PUT /api/profile -> SQLite local (metas diárias)
 
 ### Endpoints
 
-`GET /`, `GET /api/health`, `GET /api/model/info`, `POST /api/analyze`, `GET/PUT /api/profile`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/metadata`, `GET /api/taco/{id}`, `GET /api/taco/csv`, `GET /api/taco/pdf`.
+`GET /`, `GET /api/health`, `GET /api/model/info`, `POST /api/crop-suggestion`, `POST /api/analyze`, `GET/PUT /api/profile`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/metadata`, `GET /api/taco/{id}`, `GET /api/taco/csv`, `GET /api/taco/pdf`.
 
 ### Privacidade e deploy
 

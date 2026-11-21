@@ -1,5 +1,5 @@
 const $ = (id)=>document.getElementById(id);
-const STATE={file:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[]};
+const STATE={file:null,crop:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[]};
 function showStatus(id,message,error=false){const el=$(id);el.textContent=message;el.classList.toggle('error',error);}
 const FIELD_LABELS={kcal:'Meta energética',proteina_g:'Proteínas',carboidrato_g:'Carboidratos',lipideos_g:'Gorduras',refeicoes:'Refeições por dia',objetivo:'Objetivo',grams:'Gramas',taco_id:'Alimento TACO'};
 // Erros 422 do FastAPI chegam como lista [{loc,msg}]: transforma em texto legível.
@@ -15,7 +15,7 @@ function fillProfile(p){$('goal').value=p.objetivo;$('kcal').value=p.kcal;$('pro
 async function saveProfile(e){if(e)e.preventDefault();try{await api('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(getProfileForm())});showStatus('profileStatus','✓ Metas salvas e usadas no cálculo.');if(STATE.foods.length)await recalc();setTimeout(()=>{$('goalsDialog').close();showStatus('profileStatus','');},700);}catch(e){showStatus('profileStatus','Não foi possível salvar: '+e.message,true);}}
 // Cores das classes vêm do CSS (--class-N), as mesmas do overlay gerado no backend.
 const classColor=(id)=>getComputedStyle(document.documentElement).getPropertyValue(`--class-${id}`).trim()||'#9aa59f';
-function selectFile(file){if(!file)return;if(!file.type.startsWith('image/')){showStatus('analysisStatus','Escolha um arquivo de imagem.',true);return}if(file.size>8*1024*1024){showStatus('analysisStatus','O arquivo excede 8 MB.',true);return}STATE.file=file;STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();const url=URL.createObjectURL(file);if($('photo').dataset.objectUrl)URL.revokeObjectURL($('photo').dataset.objectUrl);$('photo').dataset.objectUrl=url;$('photo').src=url;$('dropArea').classList.add('has-photo');$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=file.name;$('photoStatus').textContent='Foto pronta para análise';$('analyzeBtn').disabled=false;showStatus('analysisStatus','Imagem selecionada. Clique em analisar.');}
+function selectFile(file){if(!file)return;if(!file.type.startsWith('image/')){showStatus('analysisStatus','Escolha um arquivo de imagem.',true);return}if(file.size>8*1024*1024){showStatus('analysisStatus','O arquivo excede 8 MB.',true);return}STATE.file=file;STATE.crop=null;STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();const url=URL.createObjectURL(file);if($('photo').dataset.objectUrl)URL.revokeObjectURL($('photo').dataset.objectUrl);$('photo').dataset.objectUrl=url;$('photo').src=url;$('dropArea').classList.add('has-photo');$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=file.name;$('photoStatus').textContent='Foto pronta para análise';$('analyzeBtn').disabled=false;$('cropBtn').disabled=false;showStatus('analysisStatus','Ajuste o recorte e confirme para analisar.');openCrop();}
 async function selectExample(type){const resp=await fetch('/static/examples/'+type+'.jpg');if(!resp.ok)return showStatus('analysisStatus','Exemplo indisponível.',true);const blob=await resp.blob();selectFile(new File([blob],`${type}.jpg`,{type:'image/jpeg'}));}
 function normalize(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
 // Nome exato primeiro; senão, entre os que contêm todas as palavras, prefere o que
@@ -71,7 +71,7 @@ async function analyze(){
  if(!STATE.file)return;
  const btn=$('analyzeBtn');btn.disabled=true;btn.textContent='Analisando imagem...';
  showStatus('analysisStatus','A rede local está segmentando a imagem. Os resultados podem conter erros.');
- const fd=new FormData();fd.append('file',STATE.file);
+ const fd=new FormData();fd.append('file',STATE.crop?STATE.crop.file:STATE.file);if(STATE.crop)fd.append('area_original',String(STATE.crop.areaOriginal));
  try{
    const res=await api('/api/analyze',{method:'POST',body:fd});
    STATE.foods=res.detected||[];STATE.unmatched=res.unmatched||[];
@@ -126,3 +126,68 @@ $('openTaco').addEventListener('click',()=>openDialog('catalogDialog','catalogSe
 document.querySelectorAll('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target===d)d.close();});d.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>d.close()));});
 $('catalogDialog').addEventListener('close',()=>showStatus('catalogStatus',''));
 renderEmptyStats();setup().catch(e=>showStatus('analysisStatus','Falha ao iniciar o protótipo: '+e.message,true));
+
+// Recorte manual: o usuário marca o prato; só o recorte vai para a IA.
+// area_original (fração da foto que o recorte ocupa) mantém as gramas calculadas sobre a foto inteira.
+const CROP={img:null,url:null,scale:1,rect:null,drag:null};
+function showPreview(src,name,status){STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();$('photo').src=src;$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=name;$('photoStatus').textContent=status;}
+function openCrop(){
+ if(!STATE.file)return;if(CROP.url)URL.revokeObjectURL(CROP.url);CROP.url=URL.createObjectURL(STATE.file);
+ const img=new Image();img.onload=()=>{CROP.img=img;const cv=$('cropCanvas');CROP.scale=Math.min(1,1000/Math.max(img.naturalWidth,img.naturalHeight));
+  cv.width=Math.round(img.naturalWidth*CROP.scale);cv.height=Math.round(img.naturalHeight*CROP.scale);CROP.rect=STATE.crop?{...STATE.crop.rect}:null;drawCrop();openDialog('cropDialog');
+  if(CROP.rect)return showStatus('cropStatus','Recorte atual. Arraste por dentro para mover, pelos cantos para redimensionar, ou fora para marcar outro.');
+  showStatus('cropStatus','Sugerindo um recorte em volta da comida…');suggestCrop();};
+ img.src=CROP.url;
+}
+async function suggestCrop(){
+ const W=CROP.img.naturalWidth,H=CROP.img.naturalHeight,fd=new FormData();fd.append('file',STATE.file);
+ try{const res=await api('/api/crop-suggestion',{method:'POST',body:fd});if(CROP.rect||!$('cropDialog').open)return;
+  if(!res.box)return showStatus('cropStatus','A IA não achou comida para sugerir um recorte. Arraste sobre a foto para marcar o prato.');
+  const b=res.box;CROP.rect={x:b.x0*W,y:b.y0*H,w:(b.x1-b.x0)*W,h:(b.y1-b.y0)*H};drawCrop();
+  showStatus('cropStatus','Recorte sugerido em volta da comida. Ajuste se precisar: arraste por dentro para mover e pelos cantos para redimensionar.');
+ }catch(e){showStatus('cropStatus','Não foi possível sugerir um recorte ('+e.message+'). Arraste sobre a foto para marcar o prato.',true);}
+}
+const cropCorners=r=>[[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]];
+function drawCrop(){
+ const cv=$('cropCanvas'),ctx=cv.getContext('2d'),s=CROP.scale;ctx.drawImage(CROP.img,0,0,cv.width,cv.height);
+ if(!CROP.rect)return;const r={x:CROP.rect.x*s,y:CROP.rect.y*s,w:CROP.rect.w*s,h:CROP.rect.h*s};
+ ctx.save();ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.rect(0,0,cv.width,cv.height);ctx.rect(r.x,r.y,r.w,r.h);ctx.fill('evenodd');
+ ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.setLineDash([]);
+ ctx.fillStyle='#fff';const hs=Math.max(8,cv.width/90);cropCorners(r).forEach(([x,y])=>ctx.fillRect(x-hs/2,y-hs/2,hs,hs));ctx.restore();
+}
+function cropPoint(e){const cv=$('cropCanvas'),b=cv.getBoundingClientRect(),W=CROP.img.naturalWidth,H=CROP.img.naturalHeight;
+ return {x:Math.max(0,Math.min(W,(e.clientX-b.left)/b.width*W)),y:Math.max(0,Math.min(H,(e.clientY-b.top)/b.height*H))};}
+function cropFromPoints(a,b){return {x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};}
+function applyCrop(){
+ const r=CROP.rect,W=CROP.img?.naturalWidth,H=CROP.img?.naturalHeight;
+ if(!r||r.w<0.1*W||r.h<0.1*H)return showStatus('cropStatus','Marque uma área maior em volta do prato.',true);
+ const x=Math.round(r.x),y=Math.round(r.y),w=Math.round(r.w),h=Math.round(r.h);
+ const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(CROP.img,x,y,w,h,0,0,w,h);
+ c.toBlob(blob=>{if(!blob)return showStatus('cropStatus','Não foi possível recortar esta imagem.',true);
+  const file=new File([blob],'recorte.jpg',{type:'image/jpeg'}),url=URL.createObjectURL(blob);
+  if(STATE.crop?.url)URL.revokeObjectURL(STATE.crop.url);
+  STATE.crop={file,url,rect:{x,y,w,h},areaOriginal:Math.max(0.01,Math.min(1,(w*h)/(W*H)))};
+  showPreview(url,`${STATE.file.name} (recortada)`,'Recorte pronto para análise');$('cropDialog').close();analyze();},'image/jpeg',0.92);
+}
+function resetCrop(){if(STATE.crop?.url)URL.revokeObjectURL(STATE.crop.url);STATE.crop=null;CROP.rect=null;
+ showPreview($('photo').dataset.objectUrl,STATE.file.name,'Foto pronta para análise');$('cropDialog').close();analyze();}
+$('cropBtn').addEventListener('click',openCrop);$('cropDialog').addEventListener('close',()=>{if(STATE.file&&!STATE.foods.length&&$('analyzeBtn').textContent==='Analisar refeição')showStatus('analysisStatus','Foto selecionada. Use "Recortar no prato" ou "Analisar refeição" quando quiser.');});$('cropApply').addEventListener('click',applyCrop);$('cropReset').addEventListener('click',resetCrop);
+// O que um ponto atinge: canto (redimensionar), interior (mover) ou fora (desenhar novo).
+function cropHit(p){
+ const r=CROP.rect;if(!r)return {mode:'draw'};const b=$('cropCanvas').getBoundingClientRect(),tol=16*CROP.img.naturalWidth/b.width;
+ const corners=cropCorners(r);for(let i=0;i<4;i++){const [x,y]=corners[i];if(Math.abs(p.x-x)<=tol&&Math.abs(p.y-y)<=tol){const [ax,ay]=corners[3-i];return {mode:'resize',anchor:{x:ax,y:ay},cursor:i===0||i===3?'nwse-resize':'nesw-resize'};}}
+ if(p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h)return {mode:'move',cursor:'move'};
+ return {mode:'draw'};
+}
+$('cropCanvas').addEventListener('pointerdown',e=>{if(!CROP.img)return;e.preventDefault();$('cropCanvas').setPointerCapture(e.pointerId);
+ const p=cropPoint(e),hit=cropHit(p);
+ if(hit.mode==='move')CROP.drag={mode:'move',off:{x:p.x-CROP.rect.x,y:p.y-CROP.rect.y}};
+ else if(hit.mode==='resize')CROP.drag={mode:'resize',anchor:hit.anchor};
+ else{CROP.drag={mode:'draw',anchor:p};CROP.rect=cropFromPoints(p,p);drawCrop();}});
+$('cropCanvas').addEventListener('pointermove',e=>{if(!CROP.img)return;const p=cropPoint(e),d=CROP.drag;
+ if(!d){$('cropCanvas').style.cursor=cropHit(p).cursor||'crosshair';return;}
+ if(d.mode==='move'){const W=CROP.img.naturalWidth,H=CROP.img.naturalHeight,r=CROP.rect;
+  r.x=Math.max(0,Math.min(W-r.w,p.x-d.off.x));r.y=Math.max(0,Math.min(H-r.h,p.y-d.off.y));}
+ else CROP.rect=cropFromPoints(d.anchor,p);
+ drawCrop();});
+['pointerup','pointercancel'].forEach(ev=>$('cropCanvas').addEventListener(ev,()=>{if(!CROP.drag)return;CROP.drag=null;showStatus('cropStatus','Clique em "Analisar recorte" ou continue ajustando.');}));

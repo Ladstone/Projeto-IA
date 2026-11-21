@@ -213,6 +213,11 @@ dialog::backdrop { background: rgba(20, 26, 23, .45); }
 .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: var(--s4) var(--s5); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 1; }
 .dialog-body { padding: var(--s5); display: grid; gap: var(--s4); }
 .modal { width: min(560px, calc(100vw - 2 * var(--s4))); max-height: calc(100vh - 2 * var(--s6)); border-radius: var(--r-md); }
+.modal-wide { width: min(900px, calc(100vw - 2 * var(--s4))); }
+/* Janela de recorte: a foto encolhe para caber, e o status e os botões ficam sempre visíveis, sem rolagem. */
+.crop-dialog .dialog-body { gap: var(--s3); padding: var(--s4) var(--s5); }
+.crop-dialog .actions { margin-top: 0; }
+.crop-canvas { display: block; max-width: 100%; max-height: calc(100vh - 270px); max-height: calc(100dvh - 270px); min-height: 120px; margin: 0 auto; border-radius: var(--r-md); cursor: crosshair; touch-action: none; user-select: none; }
 .drawer { margin: 0 0 0 auto; width: min(520px, 100vw); height: 100vh; max-height: 100vh; border-radius: var(--r-md) 0 0 var(--r-md); }
 .drawer[open] { display: flex; flex-direction: column; }
 .drawer .dialog-body { overflow-y: auto; flex: 1; align-content: start; }
@@ -243,12 +248,14 @@ dialog::backdrop { background: rgba(20, 26, 23, .45); }
   .site-header { padding: 0 var(--s4); gap: var(--s2); }
   .header-actions .btn { padding: 0 var(--s3); }
   .header-actions .label-long { display: none; }
-  #modelChip { display: none; }
   .card { padding: var(--s4); }
   .drop { height: 260px; }
   .food-controls { grid-template-columns: 96px minmax(0, 1fr) auto; }
   .form-grid { grid-template-columns: 1fr; }
   .drawer { border-radius: 0; }
   .preview-bar { flex-wrap: wrap; }
+  .crop-dialog .dialog-head .muted { display: none; }
+  .crop-dialog .dialog-body { padding: var(--s3) var(--s4); }
+  .crop-canvas { max-height: calc(100vh - 220px); max-height: calc(100dvh - 220px); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

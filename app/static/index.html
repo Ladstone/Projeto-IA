@@ -6,7 +6,7 @@
 <meta name="description" content="PratoMetria — análise de refeições por visão computacional e TACO"/>
 <title>PratoMetria</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232f6b4f'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%23f6f4ef'/%3E%3C/svg%3E"/>
-<link rel="stylesheet" href="/static/styles.css?v=9"/>
+<link rel="stylesheet" href="/static/styles.css?v=11"/>
 </head>
 <body>
 <header class="site-header">
@@ -30,7 +30,7 @@
    </div>
    <div class="preview-bar"><span id="fileName">Nenhuma imagem selecionada</span>
     <label class="toggle" title="Mostrar as regiões coloridas da IA"><input id="overlaySwitch" type="checkbox" checked/> Mostrar regiões</label></div>
-   <div class="actions"><button id="analyzeBtn" class="btn btn-primary" type="button" disabled>Analisar refeição</button><button id="changeBtn" class="btn" type="button">Trocar foto</button></div>
+   <div class="actions"><button id="analyzeBtn" class="btn btn-primary" type="button" disabled>Analisar refeição</button><button id="cropBtn" class="btn" type="button" disabled title="Marque só o prato quando ele ocupa pouco da foto">Recortar no prato</button><button id="changeBtn" class="btn" type="button">Trocar foto</button></div>
    <div id="analysisStatus" role="status" class="status"></div>
    <div class="examples">
     <div class="examples-title">Ou experimente uma foto dos datasets</div>
@@ -122,12 +122,21 @@
  </div>
 </dialog>
 
+<dialog id="cropDialog" class="modal modal-wide crop-dialog" aria-labelledby="cropTitle">
+ <div class="dialog-head"><div><h2 id="cropTitle">Recortar no prato</h2><span class="muted">Marcar só o prato ajuda a IA a ver os detalhes. As gramas seguem calculadas sobre a foto inteira.</span></div><button class="btn btn-ghost btn-sm" type="button" data-close>Fechar ✕</button></div>
+ <div class="dialog-body">
+  <canvas id="cropCanvas" class="crop-canvas" aria-label="Foto para recortar: arraste para marcar o prato"></canvas>
+  <div id="cropStatus" class="status" role="status"></div>
+  <div class="actions"><button id="cropApply" class="btn btn-primary" type="button">Analisar recorte</button><button id="cropReset" class="btn" type="button">Analisar foto inteira</button></div>
+ </div>
+</dialog>
+
 <dialog id="tacoModal" class="modal" aria-labelledby="tacoTitle">
  <div class="dialog-head"><h2 id="tacoTitle">Nutrientes do alimento</h2><button id="modalClose" class="btn btn-ghost btn-sm" type="button">Fechar ✕</button></div>
  <div class="dialog-body"><small id="tacoOrigin" class="muted">Fonte TACO por 100 g</small><div id="tacoNutrients" class="nutrient-scroll"></div>
   <p class="muted"><a href="/api/taco/pdf" target="_blank" rel="noopener">Abrir a TACO original (PDF)</a> para ácidos graxos e aminoácidos.</p></div>
 </dialog>
 
-<script src="/static/app.js?v=8" defer></script>
+<script src="/static/app.js?v=11" defer></script>
 </body>
 </html>

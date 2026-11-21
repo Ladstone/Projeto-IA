@@ -53,3 +53,37 @@ def test_pure_becomes_potato_milk_and_butter(monkeypatch):
     # Os nutrientes somam os três ingredientes.
     assert {91, 458, 261} <= {it['taco_id'] for it in data['nutrition']['alimentos']}
 
+
+def test_crop_keeps_grams_relative_to_original_photo(monkeypatch):
+    """Com recorte, a área mínima vale sobre o recorte, mas gramas e % usam a foto original."""
+    monkeypatch.setattr(main, 'vision', FakeVision())
+    raw = BytesIO(); Image.new('RGB', (100, 100), (230, 200, 120)).save(raw, format='PNG')
+    data = client.post('/api/analyze', files={'file': ('p.png', raw.getvalue(), 'image/png')},
+                       data={'area_original': '0.5'}).json()
+    arroz = [d for d in data['detected'] if d['class_id'] == ARROZ][0]
+    assert arroz['cobertura_imagem_percent'] == 10.0          # 20% do recorte = 10% da foto
+    assert arroz['grams'] == main.suggest_grams(FOOD_CLASS_MAP[ARROZ]['grams'], 0.10)
+
+
+def test_crop_area_out_of_range_is_rejected(monkeypatch):
+    monkeypatch.setattr(main, 'vision', FakeVision())
+    raw = BytesIO(); Image.new('RGB', (10, 10)).save(raw, format='PNG')
+    res = client.post('/api/analyze', files={'file': ('p.png', raw.getvalue(), 'image/png')}, data={'area_original': '1.5'})
+    assert res.status_code == 422
+
+
+def test_crop_suggestion_surrounds_detected_food(monkeypatch):
+    monkeypatch.setattr(main, 'vision', FakeVision())   # comida nas linhas 0-39 de 100
+    raw = BytesIO(); Image.new('RGB', (100, 100)).save(raw, format='PNG')
+    box = client.post('/api/crop-suggestion', files={'file': ('p.png', raw.getvalue(), 'image/png')}).json()['box']
+    assert box['x0'] == 0 and box['x1'] == 1 and box['y0'] == 0
+    assert 0.40 <= box['y1'] <= 0.50
+
+
+def test_crop_suggestion_without_food_returns_none(monkeypatch):
+    class Empty(FakeVision):
+        def predict(self, image):
+            return np.zeros((100, 100), np.uint8), np.zeros((21, 100, 100), np.float32)
+    monkeypatch.setattr(main, 'vision', Empty())
+    raw = BytesIO(); Image.new('RGB', (100, 100)).save(raw, format='PNG')
+    assert client.post('/api/crop-suggestion', files={'file': ('p.png', raw.getvalue(), 'image/png')}).json()['box'] is None

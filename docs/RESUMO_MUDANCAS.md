@@ -35,8 +35,10 @@ O resumo nutricional ficava abaixo do catálogo de 597 alimentos e havia 4 aviso
 - As metas e a Tabela TACO viraram diálogos abertos por botões no cabeçalho.
 - Cada alimento sugerido pela IA tem um selo "Sugestão da IA". O selo "IA local · experimental" do cabeçalho e o aviso amarelo "A identificação por IA é experimental" foram removidos em 17/11/2026.
 - No celular a página vira uma coluna só, com uma barra de kcal fixa no rodapé.
-- Não houve mudança no backend nem na API.
+- O redesenho em si não mudou o backend nem a API.
 - Foi verificado com 20 checagens automáticas em navegador (desktop e celular).
+- **Recorte no prato (21/11/2026):** ao escolher a foto, abre uma janela com um recorte já sugerido em volta da comida (`POST /api/crop-suggestion`). O usuário ajusta (move, redimensiona ou marca outro) e só então a análise roda, no recorte ou na foto inteira. Ajuda quando o prato ocupa pouco da foto: no teste com uma foto da internet, a carne só foi encontrada com o recorte. A área mínima de 3% vale sobre o recorte, mas as gramas e a "% da foto" continuam calculadas sobre a foto original (`area_original`), para o recorte não inflar as porções.
+- Uma análise automática em duas passadas (recortar e reanalisar a 320 px) foi testada e **descartada**: no conjunto de teste, as fotos do MyFood com algum alimento inventado subiram de 8% para 13,5–20%.
 
 **Arquivos:** `app/static/index.html`, `app/static/styles.css` (cores e espaçamentos ficam em variáveis no topo), `app/static/app.js`.
 

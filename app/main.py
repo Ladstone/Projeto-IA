@@ -7,13 +7,13 @@ from typing import Optional
 
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
-from fastapi import FastAPI,File,UploadFile,HTTPException
+from fastapi import FastAPI,File,Form,UploadFile,HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
-from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION
+from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
 from .unified_classes import RECIPES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
@@ -159,9 +159,31 @@ def suggest_grams(default_grams:float,region_fraction:float)->int:
     cap=int(default_grams*1.5//5*5)  # arredonda o teto para baixo, para não ultrapassá-lo
     return max(5,min(grams,cap))
 
+@app.post('/api/crop-suggestion')
+async def crop_suggestion(file:UploadFile=File(...)):
+    """Sugere um recorte em volta da comida (frações 0-1 da foto) para o usuário ajustar.
+
+    Usa as regiões da análise normal; se não houver nenhuma, devolve box=None.
+    """
+    if vision is None:
+        raise HTTPException(503, model_error or 'Modelo local indisponível')
+    raw=await file.read()
+    if len(raw)>8*1024*1024:
+        raise HTTPException(413,'Imagem deve ter no máximo 8 MB')
+    image=load_image(raw)
+    with model_lock:
+        mask,_=vision.predict(image)
+    box=food_crop_box(mask)
+    return {'box':None if box is None else dict(zip(('x0','y0','x1','y1'),(round(v,4) for v in box)))}
+
 @app.post('/api/analyze')
-async def analyze(file:UploadFile=File(...)):
+async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
     """Segmentação local, sem serviços externos, atalhos ou lista fixa de resultados.
+
+    ``area_original``: quando o usuário recorta a foto em volta do prato, a fração da
+    foto original que o recorte ocupa (0-1]. A área mínima de detecção vale sobre o
+    recorte (o que a rede vê), mas as gramas e a "% da foto" usam a foto ORIGINAL,
+    para que recortar não infle as porções.
 
     Um pixel pode ter muitas probabilidades independentes; o overlay escolhe só
     a melhor classe elegível. Os candidatos são calculados para CADA imagem.
@@ -170,6 +192,8 @@ async def analyze(file:UploadFile=File(...)):
     """
     if vision is None:
         raise HTTPException(503, model_error or 'Modelo local indisponível')
+    if not 0.01<=area_original<=1:
+        raise HTTPException(422,'area_original deve estar entre 0,01 e 1')
     raw=await file.read()
     if len(raw)>8*1024*1024:
         raise HTTPException(413,'Imagem deve ter no máximo 8 MB')
@@ -197,9 +221,9 @@ async def analyze(file:UploadFile=File(...)):
             continue
         base={
             'class_id':class_id,'porcao_padrao_g':record['grams'],'origem':'modelo_local',
-            'score_nao_calibrado':round(score,2),'cobertura_imagem_percent':round(frac*100,1),
+            'score_nao_calibrado':round(score,2),'cobertura_imagem_percent':round(frac*area_original*100,1),
         }
-        total=suggest_grams(record['grams'],frac)
+        total=suggest_grams(record['grams'],frac*area_original)
         if class_id in RECIPES:
             parts=RECIPES[class_id]
             recipe=', '.join(f"{round(f*100)}% {nome}" for nome,_,f in parts)

@@ -93,6 +93,20 @@ def detected_classes(mask, min_fraction=MIN_REGION_FRACTION):
     return out
 
 
+def food_crop_box(mask, margin=0.05):
+    """Retângulo (x0, y0, x1, y1) em frações da foto em volta das regiões de comida; None se não há.
+
+    Usado só para SUGERIR um recorte ao usuário, que pode ajustá-lo antes da análise.
+    """
+    ys, xs = np.nonzero(mask)
+    if not len(xs):
+        return None
+    gh, gw = mask.shape
+    x0, x1, y0, y1 = xs.min() / gw, (xs.max() + 1) / gw, ys.min() / gh, (ys.max() + 1) / gh
+    pad = margin * max(x1 - x0, y1 - y0)
+    return (max(0.0, x0 - pad), max(0.0, y0 - pad), min(1.0, x1 + pad), min(1.0, y1 + pad))
+
+
 class VisionService:
     def __init__(self, weight_path: Path, device='cpu'):
         self.device = device
