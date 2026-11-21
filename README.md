@@ -2,15 +2,15 @@
 
 Protótipo executável de **interface + módulo de inteligência artificial + módulo de resposta**, pensado para entrega universitária e continuação por uma equipe. Não usa serviços externos ou chave de API.
 
-> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v2 preliminar**, um piloto de 3 épocas treinado com **dois datasets de imagens**. No conjunto de teste ele é bem melhor que o v1, mas **a identificação continua experimental**:
-> - **Milho e Beterraba ainda não funcionam** (IoU de 0,03 e 0,06 no teste).
+> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v2**, treinado por 20 épocas com **dois datasets de imagens**. No conjunto de teste ele é bem melhor que o v1 e que o piloto, mas **a identificação continua experimental**:
+> - **Milho é a classe mais fraca** (IoU de 0,44 no teste, com poucas fotos).
 > - **Não há avaliação com fotos reais de usuários.** Todas as métricas usam fotos dos próprios datasets.
 >
 > O projeto não deve ser apresentado como aplicativo nutricional preciso ou finalizado.
 
 ## O que já funciona
 
-1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 21 categorias visuais. O modelo ativo é o v2 preliminar (MobileNetV3 + LR-ASPP); o v1 (U-Net) fica como backup.
+1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 21 categorias visuais. O modelo ativo é o v2 (MobileNetV3 + LR-ASPP, 20 épocas); o v2 piloto e o v1 (U-Net) ficam como backup.
 2. Ver regiões sugeridas, editar/retirar alimentos e acrescentar qualquer um dos **597 registros da TACO**.
 3. Informar os gramas da porção (a foto **não mede peso**), consultar os **26 campos da Tabela 1 da TACO** e recalcular os totais.
 4. Configurar metas pessoais de kcal/proteína/carboidratos/lipídios, comparar a refeição com essas metas e obter sugestões baseadas em regras.
@@ -88,29 +88,28 @@ Endpoints principais: `GET /api/health`, `GET /api/model/info`, `POST /api/analy
 
 ## Próximas etapas
 
-Situação em 16/11/2026. Na branch `fase-b-modelo`, o app usa o **v2 preliminar** (`models/unified_21class.pt`, cópia de `models/unified_21class_v2_piloto.pt`). O v1 (U-Net de 160 px) está guardado em `models/unified_21class_v1.(pt|json)`. Para voltar a ele, copie esses dois arquivos para `models/unified_21class.*`.
+Situação em 21/11/2026. O app usa o **v2** (`models/unified_21class.pt`, cópia de `models/unified_21class_v2.pt`), treinado por 20 épocas. Ficam como backup o **v2 piloto** de 3 épocas (`models/unified_21class_v2_piloto.(pt|json)`) e o **v1**, U-Net de 160 px (`models/unified_21class_v1.(pt|json)`). Para voltar a um deles, copie os dois arquivos para `models/unified_21class.*`.
 
-### Modelo v2 preliminar
+### Modelo v2
 
-É um **piloto de 3 épocas**: MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida. Época e limiares foram escolhidos **só na validação**.
+MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida. Treino de 20 épocas em CPU (99 min); a melhor época foi a 16 (F1 de presença 0,97 na validação). Época e limiares foram escolhidos **só na validação**.
 
-### Limitações conhecidas do v2 preliminar
+### Limitações conhecidas do v2
 
-- **Milho e Beterraba ainda não funcionam.** O IoU no teste foi de 0,03 e 0,06, com 1 e 2 fotos de teste.
+- **Milho é a classe mais fraca** (IoU 0,44 no teste); Macarrão no conjunto brasileiro fica em 0,60.
 - **Não há avaliação com fotos reais de usuários.** Todas as métricas usam fotos dos datasets MyFood e Brazilian Food Images, que vêm das mesmas fontes do treino.
-- No conjunto brasileiro, todas as classes têm de 1 a 8 fotos de teste, então os números por classe são frágeis. Arroz e Salada pioraram um pouco nesse conjunto em relação ao v1.
-- É um piloto curto: as métricas de validação ainda subiam na última época.
+- No conjunto brasileiro, todas as classes têm de 1 a 8 fotos de teste, então os números por classe são frágeis.
 
-Avaliação única no conjunto de teste, com a mesma regra de detecção do app. Quase duplicatas do treino foram removidas do teste. Relatório completo em [`docs/METRICAS_PILOTO_V2.json`](docs/METRICAS_PILOTO_V2.json).
+Avaliação única no conjunto de teste, com a mesma regra de detecção do app. Quase duplicatas do treino foram removidas do teste. Relatório completo em [`docs/METRICAS_V2_COMPLETO.json`](docs/METRICAS_V2_COMPLETO.json) (o do piloto continua em [`docs/METRICAS_PILOTO_V2.json`](docs/METRICAS_PILOTO_V2.json)).
 
-| Teste | v1 | v2 piloto |
-|---|---:|---:|
-| MyFood (222 fotos): F1 de presença, macro de 8 classes | 0,35 | 0,89 |
-| MyFood: falsos positivos por imagem | 2,84 | 0,19 |
-| MyFood: pratos 100% corretos | 6% | 78% |
-| MyFood: fundo marcado como comida | 43% | 9% |
-| Brasileiro (78 fotos): pixels anotados na classe certa | 35% | 65% |
-| Imagens sem comida (120 sintéticas): com detecção espúria | 89% | 0% |
+| Teste | v1 | v2 piloto | v2 |
+|---|---:|---:|---:|
+| MyFood (222 fotos): F1 de presença, macro de 8 classes | 0,35 | 0,89 | 0,94 |
+| MyFood: falsos positivos por imagem | 2,84 | 0,19 | 0,10 |
+| MyFood: pratos 100% corretos | 6% | 78% | 88% |
+| MyFood: fundo marcado como comida | 43% | 9% | 5% |
+| Brasileiro (78 fotos): pixels anotados na classe certa | 35% | 65% | 82% |
+| Imagens sem comida (120 sintéticas): com detecção espúria | 89% | 0% | 0% |
 
 Cuidados ao interpretar:
 - No conjunto brasileiro, **todas as classes têm 1 a 8 fotos de teste**: os números por classe são indicativos, não conclusivos.
@@ -119,18 +118,17 @@ Cuidados ao interpretar:
 
 ### A fazer
 
-1. **Treino completo do v2** (planejado para a semana de 23/11/2026). São ~20 épocas a ~6,3 min cada, cerca de **2 h 10 min** em CPU (Ryzen 5 5500U):
+1. **Retreinar o v2**, se necessário (~100 min em CPU, Ryzen 5 5500U):
    ```powershell
    .\.venv\Scripts\python.exe scripts/train_v2.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip" --epochs 20 --run-dir models/runs/v2
    .\.venv\Scripts\python.exe scripts/export_v2.py --run-dir models/runs/v2 --out models/unified_21class_v2.pt
    .\.venv\Scripts\python.exe scripts/evaluate_models.py --myfood ... --brazil ... --model v1=models/unified_21class_v1.pt --model v2=models/unified_21class_v2.pt
    ```
-   O treino grava checkpoint a cada época e log em `models/runs/v2/train.log`. Se for interrompido, rode **o mesmo comando** para retomar.
-2. **Decidir se o v2 completo substitui o v2 preliminar.** Isso exige aprovação explícita: compare os dois com `evaluate_models.py` no mesmo teste antes de trocar.
-3. **Fazer Milho e Beterraba funcionarem e reforçar classes com poucos exemplos** (Salada com maionese, Mandioca, Cenoura, Batata frita, entre outras). Elas precisam de mais fotos anotadas. Alguns limiares escolhidos na validação ficaram nos extremos (Tomate 0,15; Farofa 0,20; Maçã 0,95) por falta de exemplos.
+   O treino grava checkpoint a cada época e log em `models/runs/v2/train.log`. Se for interrompido, rode **o mesmo comando** para retomar. Trocar o modelo ativo exige aprovação explícita da equipe, depois de comparar no mesmo teste.
+2. **Reforçar classes com poucos exemplos** (Milho, Salada com maionese, Mandioca, Cenoura, Batata frita, entre outras). Elas precisam de mais fotos anotadas.
+3. **Revisar limiares extremos.** No v2, os limiares escolhidos na validação ficaram muito baixos para Tomate (0,15) e Farofa (0,05), e em 0,90–0,95 para várias outras classes, em parte por falta de exemplos.
 4. **Avaliar com fotos reais** de pratos, tiradas com permissão e anotadas, que não venham dos datasets.
-5. **Frontend novo** (branch `frontend-redesign`): verificado com 20 checagens automáticas e prints. Falta revisão e merge.
-6. **Pequenos ajustes de texto:** falta um ponto antes de "Porção inicial estimada…" na nota de cada alimento (`app/main.py`).
+5. **Pequenos ajustes de texto:** falta um ponto antes de "Porção inicial estimada…" na nota de cada alimento (`app/main.py`).
 
 ## Antes de entregar ao professor
 
