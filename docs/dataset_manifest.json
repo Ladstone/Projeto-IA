@@ -1,20 +1,29 @@
 {
   "project": "PratoMetria",
-  "visual_model": "FoodUNet 21 categorias, pesos incluídos",
+  "visual_model": "v2: MobileNetV3-Large (ImageNet) + LR-ASPP, 21 categorias, pesos incluídos",
   "datasets": [
     {
       "name": "MyFood Dataset",
       "train": 750,
       "val": 250,
       "test": 250,
-      "supervision": "máscaras multiclasse por imagem"
+      "supervision": "máscaras multiclasse por imagem",
+      "source": "https://doi.org/10.5281/zenodo.4041488",
+      "license": "CC-BY-4.0",
+      "authors": "Charles N. C. Freitas, Filipe R. Cordeiro, Valmir Macario",
+      "paper": "arXiv:2012.03087",
+      "sha256": "870210634b83c0452a8db612232d4cae4476587e1fa2d918aefe04b027a04954"
     },
     {
       "name": "Brazilian Food Images",
       "train": 681,
       "val": 234,
       "test_images_without_masks": 160,
-      "supervision": "uma máscara binária de uma classe por imagem"
+      "supervision": "uma máscara binária de uma classe por imagem",
+      "source": "https://github.com/brazilianfoodimage/dataset",
+      "license": null,
+      "license_note": "Repositório de origem sem licença declarada (verificado em 21/11/2026); não redistribuir sem autorização",
+      "sha256": "393d01c0952b87debebe5397953e15564d824a402553686eb9f98946fe175f85"
     }
   ],
   "trained_weights": "models/unified_21class.pt",

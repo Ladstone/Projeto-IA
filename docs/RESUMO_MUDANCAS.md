@@ -132,8 +132,10 @@ O app lê a arquitetura pelo `.json`, então não é preciso mudar código. Com 
 ## 6. Como treinar de novo
 
 **Datasets** (não estão no repositório):
-- `MyFood Dataset.zip`: **[link a preencher pela equipe]**
-- `Brazilian food images.zip`: **[link a preencher pela equipe]**
+- `MyFood Dataset.zip`: [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488). É o arquivo `MyFood Dataset.zip` do registro, idêntico ao usado aqui.
+- `Brazilian food images.zip`: origem [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub). A pasta `training_set` do ZIP usado é um clone desse repositório; a origem do `test_set` (160 fotos sem máscaras) não foi identificada.
+
+Códigos de verificação (SHA-256) dos ZIPs usados: ver `docs/DATASETS.md`.
 
 **Comandos:**
 ```powershell
@@ -169,6 +171,6 @@ O app lê a arquitetura pelo `.json`, então não é preciso mudar código. Com 
 
 **Licenças:**
 - **Fotos de exemplo** (`app/static/examples/`): a licença ainda não foi verificada. Se não for possível confirmar, removam as fotos e os botões de exemplo antes de publicar.
-- **Brazilian Food Images:** segundo a equipe, a licença é **CC BY 4.0**, que exige citar o autor. Isso ainda **não está registrado no repositório**: incluir a referência e o autor (**[a preencher]**) no README e na apresentação.
-- **MyFood:** a licença ainda não foi verificada.
+- **MyFood:** **CC BY 4.0** (verificado no Zenodo em 21/11/2026). Permite redistribuir com crédito. Citar: Freitas, C. N. C.; Cordeiro, F. R.; Macario, V. *MyFood: A Food Segmentation and Classification System to Aid Nutritional Monitoring*. SIBGRAPI 2020 ([arXiv:2012.03087](https://arxiv.org/abs/2012.03087)); dataset em [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488).
+- **Brazilian Food Images:** o repositório de origem, [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub), **não declara licença** nem autor (verificado em 21/11/2026). A informação anterior de que seria CC BY 4.0 não se confirmou. Sem licença, vale "todos os direitos reservados": usar para estudo é razoável, mas **não republicar** o dataset sem autorização do dono. Citar o repositório na apresentação.
 - **TACO:** citar NEPA/UNICAMP, 4ª ed., 2011.

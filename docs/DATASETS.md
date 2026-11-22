@@ -29,6 +29,23 @@ mayo(potato salad) 14; milanesesteak 27; noodles 17;
 pastaredsauce 27; pumpkin 27; rice 57; salad 69; tomato 48.
 ```
 
+## Fontes, licenças e verificação
+
+| Dataset | Fonte | Licença (verificada em 21/11/2026) |
+|---|---|---|
+| MyFood | [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488) · artigo SIBGRAPI 2020, [arXiv:2012.03087](https://arxiv.org/abs/2012.03087) · Freitas, Cordeiro e Macario | **CC BY 4.0**: redistribuição permitida com crédito |
+| Brazilian Food Images | [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub) | **Não declarada** (sem LICENSE, README sem autor): não republicar sem autorização |
+
+Códigos de verificação dos ZIPs usados no treino (confira com `sha256sum` ou `Get-FileHash`):
+
+```text
+MyFood Dataset.zip           SHA-256 870210634b83c0452a8db612232d4cae4476587e1fa2d918aefe04b027a04954
+                             MD5     552de1d0596f8f11ab481517790441f9 (igual ao informado pelo Zenodo)
+Brazilian food images.zip    SHA-256 393d01c0952b87debebe5397953e15564d824a402553686eb9f98946fe175f85
+```
+
+O ZIP do MyFood é o próprio arquivo do Zenodo. No ZIP brasileiro, a pasta `training_set` é um clone do repositório acima; a origem do `test_set` não foi identificada.
+
 ## Como a TACO se relaciona
 
 Os dados TACO **não são imagens** e não podem, por si, treinar reconhecimento de alimentos. O modelo prevê categorias como `Frango`, que têm correspondências iniciais **editáveis** em `app/unified_classes.py`: por exemplo, `Frango` aponta provisoriamente para `Frango, peito, sem pele, grelhado` (TACO #410). A tabela TACO, íntegra como 597 registros/26 campos estruturados da **Tabela 1**, está em `app/data/taco_tabela1_completa.csv` e `app/data/taco.json`; as Tabelas 2 e 3 permanecem consultáveis no PDF. O peso da porção é informado/corrigido pelo usuário.

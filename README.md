@@ -47,12 +47,12 @@ Testes que reabrem os ZIPs originais são ignorados se os datasets não estivere
 
 ## Datasets de treinamento
 
-- **MyFood Dataset.zip**: 750 imagens treino, 250 validação, 250 teste, com máscaras multiclasse.
-- **Brazilian food images.zip**: 681 pares imagem/máscara em treino e 234 em validação, com 20 categorias; o `test_set` original tem 160 imagens sem máscaras.
+- **MyFood Dataset.zip**: 750 imagens treino, 250 validação, 250 teste, com máscaras multiclasse. Fonte: [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488), licença CC BY 4.0.
+- **Brazilian food images.zip**: 681 pares imagem/máscara em treino e 234 em validação, com 20 categorias; o `test_set` original tem 160 imagens sem máscaras. Fonte: [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub), sem licença declarada.
 - Os dois conjuntos foram harmonizados em **21 categorias visuais** e usados no treino dos pesos incluídos em `models/unified_21class.pt`.
 - A tabela TACO é uma **base nutricional**, não um conjunto de treinamento de imagens.
 
-Os dois ZIPs originais somam centenas de MB e **não estão no repositório**. É necessário obtê-los separadamente com a equipe para treinar outra vez; **não** são necessários para executar a demo. Consulte [Documentação dos datasets](docs/DATASETS.md) e [Avaliação e limitações](docs/AVALIACAO.md).
+Os dois ZIPs originais somam centenas de MB e **não estão no repositório**. Para treinar outra vez, baixe-os nas fontes acima (ou peça à equipe); **não** são necessários para executar a demo. Consulte [Documentação dos datasets](docs/DATASETS.md) e [Avaliação e limitações](docs/AVALIACAO.md).
 
 ## Reproduzir/continuar treinamento
 
