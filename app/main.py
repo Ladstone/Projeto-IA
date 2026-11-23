@@ -2,7 +2,7 @@
 from __future__ import annotations
 from pathlib import Path
 from io import BytesIO
-import base64, json, sqlite3, threading
+import base64, json, os, sqlite3, threading
 from typing import Optional
 
 import numpy as np
@@ -17,7 +17,7 @@ from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTI
 from .unified_classes import RECIPES
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
-ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
+ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
 app.mount('/static',StaticFiles(directory=STATIC),name='static')
 lock=threading.Lock();model_lock=threading.Lock()
