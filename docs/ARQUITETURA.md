@@ -10,9 +10,9 @@ Recorte no prato (sugerido por POST /api/crop-suggestion, editável; opcional)
 POST /api/analyze (FastAPI)
        |
        v
-VisionService.predict -> pesos PyTorch unified_21class.pt (v2: MobileNetV3 + LR-ASPP)
+VisionService.predict -> pesos PyTorch unified_21class.pt (v3: MobileNetV3 + LR-ASPP, 28 classes)
        |
-       +--> Máscaras e diagnóstico de 21 classes (hipóteses)
+       +--> Máscaras e diagnóstico de 28 classes (hipóteses)
        |
        v
 Mapeamento provisório classe -> registro TACO (editável)
@@ -29,10 +29,10 @@ GET/PUT /api/profile -> SQLite local (metas diárias)
 
 - **Interface:** `app/static/index.html` e `app/static/app.js`, sem framework, consumindo JSON REST. Não há ligação com serviços externos de IA.
 - **Backend:** FastAPI `app/main.py`, upload limitado a 8 MB, JPEG/PNG/WebP. Servidor local em `127.0.0.1` por padrão.
-- **IA:** PyTorch + torchvision `app/vision.py`, `models/unified_21class.pt` (v2, MobileNetV3-Large + LR-ASPP, 224 px; a arquitetura é lida do `.json`, então o v1 U-Net também carrega), rótulos em `app/unified_classes.py`. Limiar por classe nos metadados `.json`; diagnóstico disponibilizado em `vision_debug` para depuração.
+- **IA:** PyTorch + torchvision `app/vision.py`, `models/unified_21class.pt` (v3, MobileNetV3-Large + LR-ASPP, 224 px, 28 classes; arquitetura e número de classes são lidos do `.json`, então o v2 de 21 classes e o v1 U-Net também carregam; a variável `PRATOMETRIA_MODEL` aponta outro arquivo para teste), rótulos em `app/unified_classes.py`. Limiar por classe nos metadados `.json`; diagnóstico disponibilizado em `vision_debug` para depuração.
 - **Nutrição:** `app/nutrition.py`, fonte TACO 2011. O ID da classe de rede NÃO equivale ao código do alimento TACO.
 - **Persistência:** SQLite de um único perfil local em `app/data/profile.sqlite3`; não adequado ainda para múltiplos usuários.
-- **Modelagem:** 21 classes são categorias visuais; 597 alimentos correspondem a descrições nutricionais, incluindo variações de preparo não distinguíveis visualmente.
+- **Modelagem:** 28 classes são categorias visuais; 597 alimentos correspondem a descrições nutricionais, incluindo variações de preparo não distinguíveis visualmente.
 
 ### Pontos de alteração
 
@@ -42,7 +42,7 @@ GET/PUT /api/profile -> SQLite local (metas diárias)
 - Alterar sugestão por metas: `app/nutrition.py`.
 - Alterar o cálculo das metas pelas medidas (objetivos, fatores de atividade, g/kg de proteína, % de gordura, pisos): `app/metas.py`.
 - Alterar interface: `app/static/index.html` e `app/static/app.js`.
-- Novo treino: `scripts/train_v2.py` → `scripts/export_v2.py` → `scripts/evaluate_models.py`, com os dois ZIPs originais (comandos em `docs/RESUMO_MUDANCAS.md`).
+- Novo treino: `scripts/train_v2.py` → `scripts/export_v2.py` → `scripts/evaluate_models.py`, com os três ZIPs originais, sendo o MyFoodRepo opcional via `--myfoodrepo` (comandos em `docs/RESUMO_MUDANCAS.md`).
 
 ### Endpoints
 

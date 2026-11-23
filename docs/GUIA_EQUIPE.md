@@ -4,7 +4,7 @@
 
 Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo de resposta**, apresentação do funcionamento e link para o repositório GitHub.
 
-**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede prevê 21 categorias; a TACO fornece informações de 597 registros após seleção do preparo.
+**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede prevê 28 categorias; a TACO fornece informações de 597 registros após seleção do preparo.
 
 ## Primeiro acesso
 
@@ -24,7 +24,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 
 ## Pontos prioritários de correção
 
-1. **Falsos positivos:** o v2 reduziu bastante o problema (8% das fotos de teste do MyFood com algum alimento inexistente, contra 94% no v1), mas ainda acontece. Classes com poucos exemplos (Milho, Macarrão) são as mais fracas.
+1. **Falsos positivos:** o v2 reduziu bastante o problema (8% das fotos de teste do MyFood com algum alimento inexistente, contra 94% no v1), e o v3 ficou parecido (9,5%), mas ainda acontece. As classes mais fracas do v3 são Cebola, Peixe, Abóbora e Milho.
 2. **Separação treino/avaliação:** o conjunto brasileiro possui máscaras individuais por classe; é necessário avaliar fotos novas de pratos completos com anotações multiclasse antes de afirmar acurácia geral.
 3. **Estimativa de peso:** a porção inicial é a porção padrão da categoria escalada pela área que o alimento ocupa **no prato**: o recorte ou, sem recorte, o retângulo em volta da comida (12% do prato = porção padrão; limitada a 25%–200%). Assim a distância da câmera não muda a porção. É uma heurística, **não uma medição de massa**. O usuário deve informar os gramas.
 4. **Tipo de preparo:** "frango" visual é mapeado provisoriamente para peito grelhado; o usuário precisa confirmar ou substituir.
@@ -36,7 +36,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 2. Enviar a foto de um prato, ajustar o recorte sugerido e observar as sugestões. Use fotos tiradas pela equipe; a página não tem mais fotos de exemplo.
 3. Se um item estiver errado, abrir a busca TACO e substituí-lo por um preparo correto; mostrar o recálculo de nutrientes.
 4. Mostrar que o módulo visual chama uma rede local (`app/vision.py`) e usa pesos de `models/unified_21class.pt`.
-5. Mostrar que o treinamento lê **MyFood e Brazilian Food Images** (`scripts/train_v2.py`) e explicar a supervisão parcial das máscaras brasileiras e a comparação v1 × piloto × v2 (`docs/RESUMO_MUDANCAS.md`, seção 3).
+5. Mostrar que o treinamento lê **MyFood, Brazilian Food Images e MyFoodRepo** (`scripts/train_v2.py`), explicar a supervisão parcial das máscaras brasileiras e a comparação v2 × v3 (`docs/RESUMO_MUDANCAS.md`, seção 3).
 6. Exibir os testes (`python -m pytest -q`) e ser claro sobre erros da IA.
 
 ## GitHub

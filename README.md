@@ -2,15 +2,16 @@
 
 Protótipo executável de **interface + módulo de inteligência artificial + módulo de resposta**, pensado para entrega universitária e continuação por uma equipe. Não usa serviços externos ou chave de API.
 
-> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v2**, treinado por 20 épocas com **dois datasets de imagens**. No conjunto de teste ele é bem melhor que o v1 e que o piloto, mas **a identificação continua experimental**:
-> - **Milho é a classe mais fraca** (IoU de 0,44 no teste, com poucas fotos).
+> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v3**, treinado por 15 épocas com **três datasets de imagens** e **28 categorias**. Ele reconhece 7 comidas que o v2 não via (brócolis, batata cozida, peixe, pão, cebola, hambúrguer e lasanha) e acerta bem mais em fotos variadas de celular, mas **a identificação continua experimental**:
+> - **Cebola, peixe, abóbora e milho são as classes mais fracas** (F1 ou IoU abaixo de 0,35 no teste).
+> - No teste dos dois datasets antigos, o v3 ficou um pouco abaixo do v2 (pratos 100% corretos: 86,5% x 88,3%).
 > - **Não há avaliação com fotos reais de usuários.** Todas as métricas usam fotos dos próprios datasets.
 >
 > O projeto não deve ser apresentado como aplicativo nutricional preciso ou finalizado.
 
 ## O que já funciona
 
-1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 21 categorias visuais. O modelo ativo é o v2 (MobileNetV3 + LR-ASPP, 20 épocas); o v2 piloto e o v1 (U-Net) ficam como backup.
+1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 28 categorias visuais. O modelo ativo é o v3 (MobileNetV3 + LR-ASPP, 15 épocas); o v2, o v2 piloto e o v1 (U-Net) ficam como backup.
 2. Ver regiões sugeridas, editar/retirar alimentos e acrescentar qualquer um dos **597 registros da TACO**.
 3. Informar os gramas da porção (a foto **não mede peso**), consultar os **26 campos da Tabela 1 da TACO** e recalcular os totais.
 4. Configurar metas pessoais de kcal/proteína/carboidratos/lipídios, comparar a refeição com essas metas e obter sugestões baseadas em regras.
@@ -49,10 +50,11 @@ Testes que reabrem os ZIPs originais são ignorados se os datasets não estivere
 
 - **MyFood Dataset.zip**: 750 imagens treino, 250 validação, 250 teste, com máscaras multiclasse. Fonte: [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488), licença CC BY 4.0.
 - **Brazilian food images.zip**: 681 pares imagem/máscara em treino e 234 em validação, com 20 categorias; o `test_set` original tem 160 imagens sem máscaras. Fonte: [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub), sem licença declarada.
-- Os dois conjuntos foram harmonizados em **21 categorias visuais** e usados no treino dos pesos incluídos em `models/unified_21class.pt`.
+- **archive.zip (MyFoodRepo v2.0)**: 39.962 fotos de refeições reais tiradas por usuários de um app suíço, com 498 classes anotadas por polígono (formato COCO). Fonte: AIcrowd Food Recognition Benchmark 2022, cópia do [Kaggle](https://www.kaggle.com/datasets/sainikhileshreddy/food-recognition-2022) (~5 GB). Só entra uma amostra: até 150 fotos por classe nova e 50 de reforço por classe antiga (1.491 fotos no treino).
+- Os três conjuntos foram harmonizados em **28 categorias visuais** (21 dos dois primeiros + 7 do MyFoodRepo) e usados no treino dos pesos incluídos em `models/unified_21class.pt`.
 - A tabela TACO é uma **base nutricional**, não um conjunto de treinamento de imagens.
 
-Os dois ZIPs originais somam centenas de MB e **não estão no repositório**. Para treinar outra vez, baixe-os nas fontes acima (ou peça à equipe); **não** são necessários para executar a demo. Consulte [Documentação dos datasets](docs/DATASETS.md) e [Avaliação e limitações](docs/AVALIACAO.md).
+Os ZIPs originais somam quase 6 GB e **não estão no repositório**. Para treinar outra vez, baixe-os nas fontes acima (ou peça à equipe); **não** são necessários para executar a demo. Consulte [Documentação dos datasets](docs/DATASETS.md) e [Avaliação e limitações](docs/AVALIACAO.md).
 
 ## Reproduzir/continuar treinamento
 
@@ -62,7 +64,7 @@ Com os dois ZIPs disponíveis, confira primeiro se eles estão íntegros:
 .\.venv\Scripts\python.exe scripts/verify_datasets.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip"
 ```
 
-Os comandos de treino, exportação e avaliação do v2 estão em **[A fazer](#a-fazer)**, item 1. O treino **não** substitui o modelo do app: ele grava em `models/runs/v2/`, e `export_v2.py` gera `models/unified_21class_v2.pt`. Uma nova execução não necessariamente reproduz o mesmo resultado. O script do v1 (`scripts/train_unified.py`) continua no repositório só como referência; ele **sobrescreve** `models/unified_21class.pt`, então não o use sem fazer uma cópia.
+Os comandos de treino e avaliação do v3 estão em **[A fazer](#a-fazer)**, item 1. O treino **não** substitui o modelo do app: ele grava em `models/runs/v3/` e no arquivo passado em `--out`. Uma nova execução não necessariamente reproduz o mesmo resultado. O script do v1 (`scripts/train_unified.py`) continua no repositório só como referência; ele **sobrescreve** `models/unified_21class.pt`, então não o use sem fazer uma cópia.
 
 ## Estrutura do código
 
@@ -70,13 +72,13 @@ Os comandos de treino, exportação e avaliação do v2 estão em **[A fazer](#a
 PratoMetria/
 ├── app/
 │   ├── main.py               API FastAPI, upload, inferência, metas (SQLite local)
-│   ├── vision.py             modelos v1 (U-Net) e v2 (MobileNetV3 + LR-ASPP) e predição por foto
-│   ├── unified_classes.py    21 categorias visuais e hipóteses de mapeamento TACO
+│   ├── vision.py             modelos v1 (U-Net) e v2/v3 (MobileNetV3 + LR-ASPP) e predição por foto
+│   ├── unified_classes.py    28 categorias visuais, mapas dos datasets e hipóteses TACO
 │   ├── nutrition.py          597 alimentos, porções, metas e sugestões
 │   ├── static/               HTML, CSS e JavaScript
 │   └── data/                 TACO CSV/JSON/PDF; SQLite local criado no primeiro uso
 ├── models/                   pesos treinados e metadados de validação
-├── scripts/                  leitura e treinamento com os dois datasets
+├── scripts/                  leitura e treinamento com os três datasets
 ├── tests/                    testes sem e com ZIPs originais
 ├── docs/                     handoff para equipe, arquitetura e limitações
 ├── requirements.txt
@@ -87,45 +89,52 @@ Endpoints principais: `GET /api/health`, `GET /api/model/info`, `POST /api/crop-
 
 ## Próximas etapas
 
-Situação em 21/11/2026. O app usa o **v2** (`models/unified_21class.pt`, cópia de `models/unified_21class_v2.pt`), treinado por 20 épocas. Ficam como backup o **v2 piloto** de 3 épocas (`models/unified_21class_v2_piloto.(pt|json)`) e o **v1**, U-Net de 160 px (`models/unified_21class_v1.(pt|json)`). Para voltar a um deles, copie os dois arquivos para `models/unified_21class.*`.
+Situação em 23/11/2026. O app usa o **v3** (`models/unified_21class.pt`, cópia de `models/unified_28class_v3.pt`; o nome do arquivo ficou o mesmo para não mudar o app, e o `.json` informa as 28 classes). Ficam como backup o **v2** de 21 classes (`models/unified_21class_v2.(pt|json)`), o **v2 piloto** e o **v1**. Para voltar a um deles, copie os dois arquivos para `models/unified_21class.*`; o app aceita modelos de 21 ou 28 classes.
 
-### Modelo v2
+Para testar outro modelo sem trocar o ativo, use a variável `PRATOMETRIA_MODEL`:
 
-MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida. Treino de 20 épocas em CPU (99 min); a melhor época foi a 16 (F1 de presença 0,97 na validação). Época e limiares foram escolhidos **só na validação**.
+```powershell
+$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
 
-### Limitações conhecidas do v2
+### Modelo v3
 
-- **Milho é a classe mais fraca** (IoU 0,44 no teste); Macarrão no conjunto brasileiro fica em 0,60.
-- **Não há avaliação com fotos reais de usuários.** Todas as métricas usam fotos dos datasets MyFood e Brazilian Food Images, que vêm das mesmas fontes do treino.
-- No conjunto brasileiro, todas as classes têm de 1 a 8 fotos de teste, então os números por classe são frágeis.
+Mesma rede do v2 (MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida), agora com 28 saídas. Categorias novas: **Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer (sanduíche) e Lasanha**; as duas últimas entram na TACO como receita (vários ingredientes). Coxa de frango do MyFoodRepo foi somada a Frango. Treino de 15 épocas em CPU (~3 h, 12 min por época); a melhor época foi a 15 (F1 de presença 0,69 na validação, que agora inclui as fotos difíceis do MyFoodRepo). Época e limiares foram escolhidos **só na validação**.
 
-Avaliação única no conjunto de teste, com a mesma regra de detecção do app. Quase duplicatas do treino foram removidas do teste. Relatório completo em [`docs/METRICAS_V2_COMPLETO.json`](docs/METRICAS_V2_COMPLETO.json) (o do piloto continua em [`docs/METRICAS_PILOTO_V2.json`](docs/METRICAS_PILOTO_V2.json)).
+Avaliação no conjunto de teste, com a mesma regra de detecção do app. Relatório completo em [`docs/METRICAS_V3.json`](docs/METRICAS_V3.json); o do v2 continua em [`docs/METRICAS_V2_COMPLETO.json`](docs/METRICAS_V2_COMPLETO.json).
 
-| Teste | v1 | v2 piloto | v2 |
+| Teste | v1 | v2 | v3 |
 |---|---:|---:|---:|
-| MyFood (222 fotos): F1 de presença, macro de 8 classes | 0,35 | 0,89 | 0,94 |
-| MyFood: falsos positivos por imagem | 2,84 | 0,19 | 0,10 |
-| MyFood: pratos 100% corretos | 6% | 78% | 88% |
-| MyFood: fundo marcado como comida | 43% | 9% | 5% |
-| Brasileiro (78 fotos): pixels anotados na classe certa | 35% | 65% | 82% |
-| Imagens sem comida (120 sintéticas): com detecção espúria | 89% | 0% | 0% |
+| MyFood (222 fotos): F1 de presença, macro de 8 classes | 0,35 | 0,94 | 0,93 |
+| MyFood: falsos positivos por imagem | 2,84 | 0,10 | 0,11 |
+| MyFood: pratos 100% corretos | 6% | 88% | 86% |
+| MyFood: fundo marcado como comida | 43% | 5% | 3,5% |
+| Brasileiro (78 fotos): pixels anotados na classe certa | 35% | 82% | 77% |
+| Imagens sem comida (120 sintéticas): com detecção espúria | 89% | 0% | 3,3% |
+| MyFoodRepo (294 fotos de celular): F1 de presença, macro | — | 0,12 | 0,56 |
+| MyFoodRepo: pratos 100% corretos | — | 7,5% | 35% |
 
-Cuidados ao interpretar:
-- No conjunto brasileiro, **todas as classes têm 1 a 8 fotos de teste**: os números por classe são indicativos, não conclusivos.
-- As fotos de teste vêm das mesmas fontes do treino. **Não há ainda avaliação com fotos reais de usuários.**
-- O IoU de 0,53 relatado antes para o v1 usava outra métrica. Ela avaliava só a classe anotada de cada foto e ignorava falsos positivos de outras classes, então não é comparável com a tabela acima.
+F1 das categorias novas no teste do MyFoodRepo: Pão 0,80; Hambúrguer 0,79; Lasanha 0,74; Brócolis 0,73; Batata cozida 0,64; Peixe 0,33; Cebola 0,17.
+
+### Limitações conhecidas do v3
+
+- **Classes fracas:** Cebola (F1 0,17) e Peixe (0,33) entre as novas; Abóbora (0,18 no MyFoodRepo) e Milho (IoU 0,26 no brasileiro, era 0,44 no v2) entre as antigas.
+- **Pequena perda nos testes antigos:** no brasileiro, os pixels na classe certa caíram de 82% para 77%; Purê, Arroz e Salada foram as que mais perderam.
+- **Detecção espúria em imagens sem comida:** 3,3% das imagens sintéticas (o v2 tinha 0%).
+- **Não há avaliação com fotos reais de usuários.** As fotos do MyFoodRepo são as mais próximas disso, mas vêm da mesma fonte do treino.
+- No conjunto brasileiro, todas as classes têm de 1 a 8 fotos de teste, então os números por classe são frágeis.
 
 ### A fazer
 
-1. **Retreinar o v2**, se necessário (~100 min em CPU, Ryzen 5 5500U):
+1. **Retreinar o v3**, se necessário (~3 h em CPU, Ryzen 5 5500U; feche programas pesados, porque o treino usa vários GB de RAM):
    ```powershell
-   .\.venv\Scripts\python.exe scripts/train_v2.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip" --epochs 20 --run-dir models/runs/v2
-   .\.venv\Scripts\python.exe scripts/export_v2.py --run-dir models/runs/v2 --out models/unified_21class_v2.pt
-   .\.venv\Scripts\python.exe scripts/evaluate_models.py --myfood ... --brazil ... --model v1=models/unified_21class_v1.pt --model v2=models/unified_21class_v2.pt
+   .\.venv\Scripts\python.exe scripts/train_v2.py --myfood "C:\caminho\MyFood Dataset.zip" --brazil "C:\caminho\Brazilian food images.zip" --myfoodrepo "C:\caminho\archive.zip" --epochs 15 --run-dir models/runs/v3 --out models/unified_28class_v3.pt
+   .\.venv\Scripts\python.exe scripts/evaluate_models.py --myfood ... --brazil ... --myfoodrepo ... --model v2=models/unified_21class_v2.pt --model v3=models/unified_28class_v3.pt --out docs/METRICAS_V3.json
    ```
-   O treino grava checkpoint a cada época e log em `models/runs/v2/train.log`. Se for interrompido, rode **o mesmo comando** para retomar. Trocar o modelo ativo exige aprovação explícita da equipe, depois de comparar no mesmo teste.
-2. **Reforçar classes com poucos exemplos** (Milho, Salada com maionese, Mandioca, Cenoura, Batata frita, entre outras). Elas precisam de mais fotos anotadas.
-3. **Revisar limiares extremos.** No v2, os limiares escolhidos na validação ficaram muito baixos para Tomate (0,15) e Farofa (0,05), e em 0,90–0,95 para várias outras classes, em parte por falta de exemplos.
+   O treino grava checkpoint a cada época e log em `models/runs/v3/train.log`. Se for interrompido, rode **o mesmo comando** para retomar. Trocar o modelo ativo exige aprovação explícita da equipe, depois de comparar no mesmo teste.
+2. **Reforçar classes fracas** (Cebola, Peixe, Abóbora, Milho): aumentar o teto de fotos do MyFoodRepo para elas ou anotar fotos próprias.
+3. **Novas categorias:** o MyFoodRepo tem outras comidas que existem na TACO (espinafre, couve-flor, abobrinha, frutas, atum, camarão...). O mapa fica em `MYFOODREPO_LABELS`, em `app/unified_classes.py`.
 4. **Avaliar com fotos reais** de pratos, tiradas com permissão e anotadas, que não venham dos datasets.
 
 ## Antes de entregar ao professor

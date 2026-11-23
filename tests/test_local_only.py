@@ -19,7 +19,7 @@ def test_analyze_has_only_local_mode():
     assert result.status_code==200,result.text
     data=result.json()
     assert data['mode']=='local'
-    assert len(data['vision_debug'])==21
+    assert len(data['vision_debug'])==28
     assert data['analysis_quality']=='experimental'
     assert all(it['class_id'] in range(1,22) for it in data['detected'])
 

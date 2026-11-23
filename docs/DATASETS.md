@@ -1,4 +1,4 @@
-# Integração e rastreabilidade dos dois datasets
+# Integração e rastreabilidade dos datasets
 
 ## Resumo conferido pela execução do decodificador
 
@@ -12,13 +12,13 @@ O comando `python scripts/verify_datasets.py --myfood ... --brazil ...` foi exec
 
 - **MyFood:** imagens `train/*.png`, `val/*.png`, `test/*.png` com anotações em `train_ann`, `val_ann`, `test_ann`. O código converte os rótulos 2 a 10 para IDs comuns; o rótulo 1 indica região ignorada.
 - **Brazilian Food Images:** pastas como `training_set/chicken/` com pares de arquivos imagem `chicken0000.jpg` e máscara `chicken0000_.jpg`. As máscaras são binárias e anotam apenas **a classe daquela pasta** em um prato que pode conter outros alimentos.
-- **Normalização:** `app/unified_classes.py` faz o mapeamento das classes para 21 categorias visuais, unificando, por exemplo, ovo frito/cozido na classe `Ovo`.
+- **Normalização:** `app/unified_classes.py` faz o mapeamento das classes para 28 categorias visuais (21 destes dois datasets + 7 do MyFoodRepo, ver abaixo), unificando, por exemplo, ovo frito/cozido na classe `Ovo`.
 - **Supervisão por pixel (v2, `scripts/data_v2.py`):**
   - MyFood: as máscaras anotam todos os alimentos da foto. Cada pixel anotado é positivo para sua classe e negativo para as outras 20; o fundo é negativo para as 21.
   - Brasileiro: só um alimento é anotado. Pixels da máscara são positivos para a classe e negativos para as outras 20; pixels fora da máscara são negativos **só para a classe anotada** e desconhecidos para as demais. Isso evita ensinar que outro alimento visível, mas não anotado, é fundo.
-  - Imagens sintéticas sem comida (cerca de 8% por época): negativas para as 21 classes.
+  - Imagens sintéticas sem comida (cerca de 8% por época): negativas para todas as classes.
 - **Split:** no conjunto brasileiro, pares de treino/validação são particionados deterministicamente por SHA-1 do conteúdo da foto. No v2, a validação antiga (234 pares) é dividida ao meio, por outro trecho do hash, em **validação nova** e **teste novo**, para que nenhum modelo tenha treinado nas fotos de teste. Depois da remoção de quase duplicatas, restam 75 fotos brasileiras na validação e 78 no teste. Fotos quase duplicadas das de treino são removidas da validação e do teste (os próprios datasets repetem fotos entre divisões).
-- **Treinamento real:** o modelo ativo (v2) é MobileNetV3-Large + LR-ASPP com 21 saídas sigmoid, treinado por `scripts/train_v2.py`, que lê **ambas** as fontes direto dos ZIPs em uma única execução. Os pesos ficam em `models/unified_21class.pt` e a inferência é `VisionService.predict` em `app/vision.py`. O script antigo do v1 (`scripts/train_unified.py`, rede `FoodUNet`) continua no repositório só como referência.
+- **Treinamento real:** o modelo ativo (v3) é MobileNetV3-Large + LR-ASPP com 28 saídas sigmoid, treinado por `scripts/train_v2.py`, que lê **as três** fontes direto dos ZIPs em uma única execução (o MyFoodRepo via `--myfoodrepo`). Os pesos ficam em `models/unified_21class.pt` e a inferência é `VisionService.predict` em `app/vision.py`. O script antigo do v1 (`scripts/train_unified.py`, rede `FoodUNet`) continua no repositório só como referência.
 
 ### Classes brasileiras anotadas no treino (quantidade de pares)
 
@@ -28,6 +28,16 @@ chicken 45; corn 14; egg 21; farofa 29; fries 42; mashed 23;
 mayo(potato salad) 14; milanesesteak 27; noodles 17;
 pastaredsauce 27; pumpkin 27; rice 57; salad 69; tomato 48.
 ```
+
+## MyFoodRepo v2.0 (desde o v3, 23/11/2026)
+
+- **Arquivo:** `archive.zip` (~5,3 GB), cópia do Kaggle ([food-recognition-2022](https://www.kaggle.com/datasets/sainikhileshreddy/food-recognition-2022)) do dataset do AIcrowd Food Recognition Benchmark 2022. O download oficial no AIcrowd estava dando erro de servidor. Artigo: Mohanty et al., *The Food Recognition Benchmark: Using Deep Learning to Recognize Food in Images*, Frontiers in Nutrition, 2022.
+- **Conteúdo usado:** `raw_data/public_training_set_release_2.0/` — 39.962 fotos, 76.491 polígonos, 498 classes, anotações COCO em `annotations.json` (o campo `segmentation` vem como texto JSON). A validação oficial (1.000 fotos) e o teste sem rótulos não são usados.
+- **Divisão:** SHA-1 do nome do arquivo `% 10`: 0 = teste, 1 = validação, resto = treino. Determinística e sem sorteio.
+- **Amostra com teto:** de cada divisão entram fotos até cada classe atingir o teto (`MFR_CAPS` em `scripts/data_v2.py`): 150 por classe nova e 50 por classe antiga no treino; 30 e 10 na validação e no teste. Uma foto conta para todas as classes que contém. Resultado: 1.491 fotos no treino, 292 na validação, 294 no teste.
+- **Mapa de classes:** `MYFOODREPO_LABELS` em `app/unified_classes.py`. Polígonos de classes fora do mapa viram "outro alimento" (ignorados no treino, como o código 1 do MyFood). Decisões: `chicken-leg` (coxa, 85 fotos) entra em Frango; `hamburger` é só a carne e entra em Carne bovina; `hamburger-bun` entra em Pão; o sanduíche inteiro é `hamburger-bread-meat-ketchup`.
+- **Fotos de treino por categoria nova (total no dataset):** Pão 5.611 (somando os tipos de pão), Batata cozida 644, Peixe 423 (fish + salmon), Brócolis 421, Cebola 285, Hambúrguer (sanduíche) 154, Lasanha 104.
+- **SHA-256:** `00afdf97a392e6baaf6e1bd13c5487917227b8e4030847f804c79ab165aa7879`
 
 ## Fontes, licenças e verificação
 
