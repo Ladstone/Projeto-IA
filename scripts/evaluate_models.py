@@ -10,6 +10,8 @@ Grupos reportados SEPARADAMENTE:
   1. MyFood test (fotos reais, máscaras multiclasse): IoU, presença P/R/F1, falsos positivos.
   2. Brasileiro test novo (fotos reais, 1 alimento anotado/foto): IoU e recall da classe anotada.
   3. Imagens sintéticas sem comida (não são fotos de pratos): taxa de detecção espúria.
+  4. (com --myfoodrepo) MyFoodRepo teste (todos os alimentos anotados): mesmas métricas do grupo 1,
+     nas classes que o MyFoodRepo rotula, inclusive as novas 22+. Modelos de 21 classes zeram nelas.
 """
 import argparse, io, json, sys, time
 from collections import Counter, defaultdict
@@ -22,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 from app.unified_classes import N_CLASS, CLASS_LABELS
 from app.vision import VisionService, detected_classes, MIN_REGION_FRACTION
 from scripts.data_v2 import (load_records, drop_near_duplicates, presence_status, synthetic_eval_set,
-                             TRAIN_SYNTHETIC_KINDS, MYFOOD_ONLY_CLASSES, IGNORE)
+                             TRAIN_SYNTHETIC_KINDS, MYFOOD_ONLY_CLASSES, MYFOODREPO_CLASSES, IGNORE)
 
 
 def predict_mask(service, pil, dim):
@@ -42,7 +44,7 @@ def mean(values):
     return float(np.mean(values)) if values else None
 
 
-def eval_myfood(service, records, dim):
+def eval_myfood(service, records, dim, src_classes=MYFOOD_ONLY_CLASSES):
     inter, union = np.zeros(N_CLASS + 1), np.zeros(N_CLASS + 1)
     tp, fp, fn = np.zeros(N_CLASS + 1), np.zeros(N_CLASS + 1), np.zeros(N_CLASS + 1)
     confusion = np.zeros((N_CLASS + 1, N_CLASS + 1), dtype=np.int64)
@@ -55,9 +57,9 @@ def eval_myfood(service, records, dim):
             inter[c] += (p & g).sum(); union[c] += (p | g).sum()
         np.add.at(confusion, (gt[valid].astype(int), mask[valid].astype(int)), 1)
         bg = gt == 0; bg_fp += int((mask[bg] > 0).sum()); bg_total += int(bg.sum())
-        brazil_only_px += int(np.isin(mask[valid], [c for c in range(1, N_CLASS + 1) if c not in MYFOOD_ONLY_CLASSES]).sum())
+        brazil_only_px += int(np.isin(mask[valid], [c for c in range(1, N_CLASS + 1) if c not in src_classes]).sum())
         food_px += int(valid.sum())
-        status = presence_status('myfood', gt, None, r['has_unknown_food'])
+        status = presence_status(r['src'], gt, None, r['has_unknown_food'])
         det = detected_classes(mask)
         n_fp = n_fn = 0
         for c in range(1, N_CLASS + 1):
@@ -67,11 +69,11 @@ def eval_myfood(service, records, dim):
             elif s == 0 and d: fp[c] += 1; n_fp += 1
         fp_per_image.append(n_fp); perfect += int(n_fp == 0 and n_fn == 0)
     per_class = {}
-    for c in MYFOOD_ONLY_CLASSES:
+    for c in src_classes:
         p, rc, f = prf(tp[c], fp[c], fn[c])
         per_class[CLASS_LABELS[c]] = dict(iou=float(inter[c] / union[c]) if union[c] else None, precisao=p, recall=rc, f1=f,
                                           imagens_positivas=int(tp[c] + fn[c]))
-    fp_other = {CLASS_LABELS[c]: int(fp[c]) for c in range(1, N_CLASS + 1) if c not in MYFOOD_ONLY_CLASSES and fp[c]}
+    fp_other = {CLASS_LABELS[c]: int(fp[c]) for c in range(1, N_CLASS + 1) if c not in src_classes and fp[c]}
     T, FP_, FN_ = tp.sum(), fp.sum(), fn.sum()
     return dict(
         imagens=len(records),
@@ -137,19 +139,22 @@ def fmt(v, pct=False):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--myfood', required=True); p.add_argument('--brazil', required=True)
+    p.add_argument('--myfoodrepo', default='', help='archive.zip do MyFoodRepo v2.0 (opcional): adiciona o grupo de teste dele')
     p.add_argument('--model', action='append', required=True, help='nome=caminho.pt (repita)')
     p.add_argument('--dimension', type=int, default=224, help='resolução da verdade de campo na comparação')
     p.add_argument('--out', default=str(ROOT / 'docs' / 'METRICAS_FASE_B.json'))
     a = p.parse_args()
     t0 = time.time()
-    train_records = load_records(a.myfood, a.brazil, 'train', a.dimension)
-    test_all = load_records(a.myfood, a.brazil, 'test', a.dimension, keep_raw=True)
+    mfr_zip = a.myfoodrepo or None
+    train_records = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=mfr_zip)
+    test_all = load_records(a.myfood, a.brazil, 'test', a.dimension, keep_raw=True, myfoodrepo_zip=mfr_zip)
     test, removed = drop_near_duplicates(test_all, train_records)
     myfood = [r for r in test if r['src'] == 'myfood']; brazil = [r for r in test if r['src'] == 'brazil']
+    mfr = [r for r in test if r['src'] == 'myfoodrepo']
     synthetic = synthetic_eval_set()
-    print(f'TESTE MyFood {len(myfood)} | Brasileiro {len(brazil)} | sintéticas {len(synthetic)} | '
+    print(f'TESTE MyFood {len(myfood)} | Brasileiro {len(brazil)} | MyFoodRepo {len(mfr)} | sintéticas {len(synthetic)} | '
           f'quase-duplicatas do treino removidas {removed} ({time.time() - t0:.0f}s)', flush=True)
-    report = dict(teste=dict(myfood=len(myfood), brasileiro=len(brazil), sinteticas=len(synthetic),
+    report = dict(teste=dict(myfood=len(myfood), brasileiro=len(brazil), myfoodrepo=len(mfr), sinteticas=len(synthetic),
                              quase_duplicatas_removidas=removed, area_minima_deteccao=MIN_REGION_FRACTION,
                              regra='VisionService.predict + detected_classes, idêntica ao app'),
                   notas=['O teste brasileiro novo é metade da validação antiga do v1: nenhum dos modelos treinou nessas fotos, '
@@ -163,6 +168,8 @@ def main():
         res = dict(arquivo=path, arquitetura=service.architecture, resolucao=service.resolution,
                    myfood=eval_myfood(service, myfood, a.dimension), brasileiro=eval_brazil(service, brazil, a.dimension),
                    sem_comida_sinteticas=eval_synthetic(service, synthetic))
+        if mfr:
+            res['myfoodrepo'] = eval_myfood(service, mfr, a.dimension, MYFOODREPO_CLASSES)
         res['segundos'] = round(time.time() - s)
         report['modelos'][name] = res
         print(f'{name} avaliado em {res["segundos"]}s', flush=True)
@@ -182,10 +189,15 @@ def main():
             ('Brasileiro: pixels anotados na classe certa', 'brasileiro', 'pixels_anotados_classe_certa_pct', True),
             ('Sintéticas: imagens com detecção espúria', 'sem_comida_sinteticas', 'com_deteccao_pct', True),
             ('Sintéticas (tipos não vistos): com detecção', 'sem_comida_sinteticas', 'tipos_nao_vistos_com_deteccao_pct', True)]
+    if mfr:
+        rows += [('MyFoodRepo: F1 de presença (macro)', 'myfoodrepo', 'f1_presenca_macro', False),
+                 ('MyFoodRepo: IoU médio', 'myfoodrepo', 'iou_medio_classes_myfood', False),
+                 ('MyFoodRepo: falsos positivos por imagem', 'myfoodrepo', 'falsos_positivos_por_imagem', False),
+                 ('MyFoodRepo: pratos 100% corretos', 'myfoodrepo', 'pratos_perfeitos_pct', True)]
     print('\n| Métrica | ' + ' | '.join(names) + ' |\n|---|' + '---:|' * len(names))
     for label, group, key, pct in rows:
         print(f'| {label} | ' + ' | '.join(fmt(report['modelos'][n][group][key], pct) for n in names) + ' |')
-    for group, key in (('myfood', 'f1'), ('brasileiro', 'iou')):
+    for group, key in (('myfood', 'f1'), ('brasileiro', 'iou')) + ((('myfoodrepo', 'f1'),) if mfr else ()):
         print(f'\nPor classe ({group}, {key}):')
         for cls in report['modelos'][names[0]][group]['por_classe']:
             print(f'  {cls}: ' + ' | '.join(f'{n} {fmt(report["modelos"][n][group]["por_classe"][cls][key])}' for n in names))

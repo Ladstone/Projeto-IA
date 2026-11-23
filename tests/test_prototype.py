@@ -24,7 +24,7 @@ def test_api_health_and_foods():
     assert client.get('/').status_code==200
     assert client.get('/api/health').json()['taco_records']==597
     assert client.get('/api/health').json()['model_ready'] is True
-    assert len(client.get('/api/foods').json()['class_map'])==21
+    assert len(client.get('/api/foods').json()['class_map'])==28
 
 
 def test_profile_persistence():

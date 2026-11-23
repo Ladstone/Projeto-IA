@@ -1,8 +1,9 @@
-"""Treino v2: MobileNetV3-Large (ImageNet) + LR-ASPP, 21 classes, supervisão negativa.
+"""Treino v2: MobileNetV3-Large (ImageNet) + LR-ASPP, N_CLASS classes, supervisão negativa.
 
 Uso (piloto e treino completo usam pastas de execução diferentes):
   python scripts/train_v2.py --myfood "...MyFood Dataset.zip" --brazil "...Brazilian food images.zip" --epochs 3 --run-dir models/runs/pilot
   python scripts/train_v2.py ... --epochs 20 --run-dir models/runs/v2 --out models/unified_21class_v2.pt
+  Com MyFoodRepo (classes 22+): acrescente --myfoodrepo "...archive.zip"
 
 Retomar: rode o MESMO comando. Se ``<run-dir>/last.pt`` existir, o treino continua da
 última época concluída (modelo, otimizador, agenda de LR e estados aleatórios).
@@ -10,6 +11,7 @@ Retomar: rode o MESMO comando. Se ``<run-dir>/last.pt`` existir, o treino contin
 Este script NUNCA lê o conjunto de teste: época e limiares são escolhidos só na validação.
 """
 import argparse, json, math, os, random, sys, time
+from collections import Counter
 from pathlib import Path
 import numpy as np
 import torch
@@ -21,6 +23,10 @@ sys.path.insert(0, str(ROOT))
 from app.unified_classes import N_CLASS, CLASS_LABELS
 from app.vision import build_model, MIN_REGION_FRACTION
 from scripts.data_v2 import load_records, drop_near_duplicates, FoodDataset, sample_weights
+
+
+def datasets_used(myfoodrepo):
+    return ['MyFood Dataset', 'Brazilian Food Images'] + (['MyFoodRepo v2.0'] if myfoodrepo else [])
 
 THRESHOLDS = np.round(np.arange(0.05, 0.951, 0.05), 2)
 MIN_VAL_POSITIVES = 3  # classe com menos imagens positivas na validação não entra na média de F1
@@ -112,6 +118,7 @@ def lr_lambda_factory(total_steps, warmup_steps):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--myfood', required=True); p.add_argument('--brazil', required=True)
+    p.add_argument('--myfoodrepo', default='', help='archive.zip do MyFoodRepo v2.0 (opcional)')
     p.add_argument('--epochs', type=int, default=20); p.add_argument('--batch', type=int, default=12)
     p.add_argument('--lr', type=float, default=5e-4); p.add_argument('--dimension', type=int, default=224)
     p.add_argument('--synthetic-frac', type=float, default=0.08)
@@ -126,11 +133,14 @@ def main():
     random.seed(a.seed); np.random.seed(a.seed); torch.manual_seed(a.seed)
 
     t0 = time.time()
-    train = load_records(a.myfood, a.brazil, 'train', a.dimension)
-    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension), train)
+    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None)
+    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None), train)
     n_syn = int(round(a.synthetic_frac * len(train)))
     log('DADOS treino', len(train), 'validacao', len(val), 'quase-duplicatas removidas da val', removed,
         'sinteticas/epoca', n_syn, f'({time.time() - t0:.0f}s)')
+    per_src = lambda recs: dict(Counter(r['src'] for r in recs))
+    log('  por fonte: treino', per_src(train), 'validacao', per_src(val), '| classes', N_CLASS)
+    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo)), ensure_ascii=False), encoding='utf-8')
 
     tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn)
     tr_ds.py_rng.seed(a.seed)
@@ -197,8 +207,8 @@ def main():
         info = json.loads((run / 'best.json').read_text(encoding='utf-8'))
         out = Path(a.out)
         torch.save(torch.load(run / 'best.pt', weights_only=True), out)
-        meta = dict(model='MobileNetV3-Large (ImageNet) + LR-ASPP, 21 saídas sigmoid', architecture='lraspp_mobilenet_v3',
-                    normalize='imagenet', classes=N_CLASS, resolution=a.dimension, datasets=['MyFood Dataset', 'Brazilian Food Images'],
+        meta = dict(model=f'MobileNetV3-Large (ImageNet) + LR-ASPP, {N_CLASS} saídas sigmoid', architecture='lraspp_mobilenet_v3',
+                    normalize='imagenet', classes=N_CLASS, resolution=a.dimension, datasets=datasets_used(a.myfoodrepo),
                     thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                     min_region_fraction=MIN_REGION_FRACTION, best_epoch=info['epoch'], epochs_trained=len(history),
                     val_presence_macro_f1=info['val_presence_macro_f1'], val_mean_iou_at_thresholds=info['val_mean_iou_at_thresholds'],

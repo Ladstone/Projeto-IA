@@ -12,7 +12,6 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from app.unified_classes import N_CLASS
 from app.vision import MIN_REGION_FRACTION, build_model
 
 
@@ -31,10 +30,13 @@ def export(run_dir, out, dimension=224, label=''):
     info = json.loads((run / 'best.json').read_text(encoding='utf-8'))
     history = json.loads((run / 'history.json').read_text(encoding='utf-8'))
     state = torch.load(run / 'best.pt', map_location='cpu', weights_only=True)
-    build_model('lraspp_mobilenet_v3').load_state_dict(state)  # falha cedo se o checkpoint não bater
+    # Execuções antigas não têm config.json: eram 21 classes, só MyFood + brasileiro.
+    cfg_path = run / 'config.json'
+    cfg = json.loads(cfg_path.read_text(encoding='utf-8')) if cfg_path.exists() else dict(classes=21, datasets=['MyFood Dataset', 'Brazilian Food Images'])
+    build_model('lraspp_mobilenet_v3', n_class=cfg['classes']).load_state_dict(state)  # falha cedo se o checkpoint não bater
     torch.save(state, out)
-    meta = dict(model='MobileNetV3-Large (ImageNet) + LR-ASPP, 21 saídas sigmoid', architecture='lraspp_mobilenet_v3',
-                normalize='imagenet', classes=N_CLASS, resolution=dimension, datasets=['MyFood Dataset', 'Brazilian Food Images'],
+    meta = dict(model=f'MobileNetV3-Large (ImageNet) + LR-ASPP, {cfg["classes"]} saídas sigmoid', architecture='lraspp_mobilenet_v3',
+                normalize='imagenet', classes=cfg['classes'], resolution=dimension, datasets=cfg['datasets'],
                 label=label, thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                 val_positive_images=info['val_positive_images'], min_region_fraction=MIN_REGION_FRACTION,
                 best_epoch=info['epoch'], epochs_trained=len(history),

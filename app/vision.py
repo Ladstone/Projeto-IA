@@ -47,7 +47,7 @@ class FoodUNet(nn.Module):
 
 
 class LRASPPFood(nn.Module):
-    """MobileNetV3-Large + LR-ASPP com 21 saídas sigmoid independentes (retorna logits)."""
+    """MobileNetV3-Large + LR-ASPP com uma saída sigmoid independente por classe (retorna logits)."""
 
     def __init__(self, n_class=N_CLASS, pretrained_backbone=False):
         super().__init__()
@@ -59,11 +59,11 @@ class LRASPPFood(nn.Module):
     def forward(self, x): return self.net(x)['out']
 
 
-def build_model(architecture='foodunet', pretrained_backbone=False):
+def build_model(architecture='foodunet', pretrained_backbone=False, n_class=N_CLASS):
     if architecture == 'foodunet':
-        return FoodUNet()
+        return FoodUNet(n_class)
     if architecture == 'lraspp_mobilenet_v3':
-        return LRASPPFood(pretrained_backbone=pretrained_backbone)
+        return LRASPPFood(n_class, pretrained_backbone=pretrained_backbone)
     raise ValueError(f'Arquitetura desconhecida: {architecture}')
 
 
@@ -115,7 +115,9 @@ class VisionService:
         self.architecture = self.metadata.get('architecture', 'foodunet')
         self.normalize = self.metadata.get('normalize', 'none')
         self.resolution = int(self.metadata.get('resolution', 160))
-        self.model = build_model(self.architecture)
+        # Modelos antigos têm 21 saídas; as classes 22+ ficam de fora (o app não as detecta com eles).
+        self.n_class = int(self.metadata.get('classes', 21))
+        self.model = build_model(self.architecture, n_class=self.n_class)
         state = torch.load(weight_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state)
         self.model.eval().to(device)
@@ -126,5 +128,5 @@ class VisionService:
         dimension = dimension or self.resolution
         arr = np.asarray(img.convert('RGB').resize((dimension, dimension), Image.Resampling.BILINEAR), dtype=np.uint8)
         data = preprocess(arr, self.normalize).unsqueeze(0).to(self.device)
-        probs = torch.sigmoid(self.model(data))[0].cpu().numpy()  # (21,H,W)
+        probs = torch.sigmoid(self.model(data))[0].cpu().numpy()  # (n_class,H,W)
         return exclusive_mask(probs, self.thresholds), probs

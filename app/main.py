@@ -91,20 +91,25 @@ def index():return FileResponse(STATIC/'index.html')
 
 @app.get('/api/health')
 def health():
-    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':len(FOOD_CLASS_MAP),'training_sources':['MyFood Dataset','Brazilian Food Images'],'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'nutrition':'TACO 4ª edição — 2011'}
+    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':(vision.n_class if vision else len(FOOD_CLASS_MAP)),'training_sources':training_sources(),'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'nutrition':'TACO 4ª edição — 2011'}
+
+def training_sources():
+    """Datasets do modelo ativo, lidos do .json (modelos antigos não registram e usaram só os dois primeiros)."""
+    default=['MyFood Dataset','Brazilian Food Images']
+    return (vision.metadata.get('datasets') if vision else None) or default
 
 def model_description():
     """Descrição lida do .json do modelo ativo, para não ficar desatualizada ao trocar de modelo."""
     if vision is None:
         return None
-    return vision.metadata.get('model') or f'{vision.architecture}, 21 classes'
+    return vision.metadata.get('model') or f'{vision.architecture}, {vision.n_class} classes'
 
 @app.get('/api/model/info')
 def model_info():
     from .unified_classes import CLASS_LABELS
     return {'model':model_description(),
             'label':vision.metadata.get('label') if vision else None,
-            'datasets':['MyFood Dataset.zip','Brazilian food images.zip'],
+            'datasets':training_sources(),
             'mascaras':'Pixels anotados supervisionam todas as classes (positivo na própria, negativo nas demais); '
                        'no conjunto brasileiro, pixels não anotados só contam para a classe anotada',
             'classes_visuais':CLASS_LABELS,
@@ -246,6 +251,7 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
     detected=[]
     diagnostics=[]
     for class_id,record in FOOD_CLASS_MAP.items():
+        if class_id>probs.shape[0]:continue  # classe que o modelo ativo não conhece
         region=mask==class_id
         frac=float(region.mean())
         score=float(probs[class_id-1][region].mean()) if region.any() else 0.0
