@@ -40,12 +40,13 @@ GET/PUT /api/profile -> SQLite local (metas diárias)
 - Alterar decisões/limiares: `app/vision.py` e `models/unified_21class.json`; revalidar após ajustes.
 - Alterar área mínima de região: `MIN_REGION_FRACTION` em `app/vision.py` (usada pelo app e por `scripts/evaluate_models.py`); sugestão de gramas: `suggest_grams` em `app/main.py`.
 - Alterar sugestão por metas: `app/nutrition.py`.
+- Alterar o cálculo das metas pelas medidas (objetivos, fatores de atividade, g/kg de proteína, % de gordura, pisos): `app/metas.py`.
 - Alterar interface: `app/static/index.html` e `app/static/app.js`.
 - Novo treino: `scripts/train_v2.py` → `scripts/export_v2.py` → `scripts/evaluate_models.py`, com os dois ZIPs originais (comandos em `docs/RESUMO_MUDANCAS.md`).
 
 ### Endpoints
 
-`GET /`, `GET /api/health`, `GET /api/model/info`, `POST /api/crop-suggestion`, `POST /api/analyze`, `GET/PUT /api/profile`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/metadata`, `GET /api/taco/{id}`, `GET /api/taco/csv`, `GET /api/taco/pdf`.
+`GET /`, `GET /api/health`, `GET /api/model/info`, `POST /api/crop-suggestion`, `POST /api/analyze`, `GET/PUT /api/profile`, `GET /api/profile/opcoes`, `POST /api/profile/calcular`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/metadata`, `GET /api/taco/{id}`, `GET /api/taco/csv`, `GET /api/taco/pdf`.
 
 ### Privacidade e deploy
 

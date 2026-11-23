@@ -83,7 +83,7 @@ PratoMetria/
 └── README.md
 ```
 
-Endpoints principais: `GET /api/health`, `GET /api/model/info`, `POST /api/crop-suggestion`, `POST /api/analyze`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/{id}`, `GET/PUT /api/profile`; documentação interativa em **http://127.0.0.1:8000/docs**.
+Endpoints principais: `GET /api/health`, `GET /api/model/info`, `POST /api/crop-suggestion`, `POST /api/analyze`, `POST /api/recalculate`, `GET /api/foods`, `GET /api/taco/{id}`, `GET/PUT /api/profile`, `GET /api/profile/opcoes`, `POST /api/profile/calcular`; documentação interativa em **http://127.0.0.1:8000/docs**.
 
 ## Próximas etapas
 

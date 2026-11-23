@@ -75,13 +75,13 @@ def recalculate(items,profile):
             'aviso':warning+'Valores da TACO por 100 g. Gramas, ingredientes e formas de preparo devem ser conferidos.'}
 
 def recommend(total,ref,profile):
-    tips=[];objetivo=profile.get('objetivo','equilibrio')
+    tips=[];objetivo=profile.get('objetivo','manutencao')
     if ref['proteina_g']>0 and total['proteina_g']<ref['proteina_g']*.8:
         deficit=ref['proteina_g']-total['proteina_g'];g=round(max(40,min(180,deficit/0.32))/10)*10
         tips.append({'titulo':'Aumentar a proteína','descricao':f'Faltam cerca de {deficit:.0f} g de proteína em relação à referência desta refeição. Uma opção é acrescentar aproximadamente {g} g de peito de frango grelhado.','tipo':'proteina'})
-    if ref['kcal']>0 and total['kcal']<ref['kcal']*.72 and objetivo in ('ganho','equilibrio'):
+    if ref['kcal']>0 and total['kcal']<ref['kcal']*.72 and objetivo in ('hipertrofia','manutencao','resistencia','ganho','equilibrio'):
         tips.append({'titulo':'Energia abaixo da referência','descricao':'Considere aumentar o arroz, tubérculos ou outra fonte de energia, conforme as demais refeições do dia.','tipo':'energia'})
-    elif ref['kcal']>0 and total['kcal']>ref['kcal']*1.25 and objetivo=='perda':
+    elif ref['kcal']>0 and total['kcal']>ref['kcal']*1.25 and objetivo in ('emagrecimento','definicao','perda'):
         tips.append({'titulo':'Revisar porções','descricao':'A energia ficou acima da referência simplificada por refeição. Confirme os pesos estimados.','tipo':'energia'})
     if ref['carboidrato_g']>0 and total['carboidrato_g']<ref['carboidrato_g']*.70:
         tips.append({'titulo':'Carboidratos abaixo da referência','descricao':'Arroz ou batata são opções para ajustar o teor de carboidratos.','tipo':'carboidratos'})

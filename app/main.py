@@ -15,12 +15,13 @@ from pydantic import BaseModel, Field, field_validator
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
 from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
 from .unified_classes import RECIPES
+from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
 app.mount('/static',StaticFiles(directory=STATIC),name='static')
 lock=threading.Lock();model_lock=threading.Lock()
-DEFAULT={'objetivo':'ganho','kcal':2400,'proteina_g':150,'carboidrato_g':290,'lipideos_g':75,'refeicoes':3}
+DEFAULT={'objetivo':'hipertrofia','kcal':2400,'proteina_g':150,'carboidrato_g':290,'lipideos_g':75,'refeicoes':3}
 
 def db_init():
     DB.parent.mkdir(exist_ok=True,parents=True)
@@ -30,13 +31,32 @@ def db_init():
 
 def profile_get():
     with lock,sqlite3.connect(DB) as con:
-        return json.loads(con.execute('select data from profile where id=1').fetchone()[0])
+        data=json.loads(con.execute('select data from profile where id=1').fetchone()[0])
+    data['objetivo']=normaliza_objetivo(data.get('objetivo','manutencao'))  # perfis salvos com ids antigos
+    return data
 
 def profile_save(data):
     with lock,sqlite3.connect(DB) as con:con.execute('update profile set data=? where id=1',(json.dumps(data,ensure_ascii=False),))
 
-class Profile(BaseModel):
-    objetivo:str='ganho'
+class Medidas(BaseModel):
+    """Dados para calcular as metas. Opcionais no perfil: a pessoa pode digitar as metas à mão."""
+    sexo:Optional[str]=None
+    idade:Optional[int]=Field(default=None,ge=18,le=100)
+    peso_kg:Optional[float]=Field(default=None,ge=30,le=300)
+    altura_cm:Optional[float]=Field(default=None,ge=120,le=230)
+    atividade:Optional[str]=None
+    @field_validator('sexo')
+    @classmethod
+    def valid_sexo(cls,v):
+        if v not in (None,'feminino','masculino'):raise ValueError('Use feminino ou masculino')
+        return v
+    @field_validator('atividade')
+    @classmethod
+    def valid_atividade(cls,v):
+        if v is not None and v not in ATIVIDADES:raise ValueError('Nível de atividade inválido')
+        return v
+class Profile(Medidas):
+    objetivo:str='hipertrofia'
     kcal:float=Field(ge=800,le=7000)
     proteina_g:float=Field(ge=0,le=500)
     carboidrato_g:float=Field(ge=0,le=900)
@@ -45,8 +65,11 @@ class Profile(BaseModel):
     @field_validator('objetivo')
     @classmethod
     def valid_objetivo(cls,v):
-        if v not in {'ganho','perda','equilibrio'}:raise ValueError('Objetivo inválido')
+        v=normaliza_objetivo(v)
+        if v not in OBJETIVOS:raise ValueError('Objetivo inválido')
         return v
+class CalculoMetas(BaseModel):
+    sexo:str;idade:int;peso_kg:float;altura_cm:float;atividade:str;objetivo:str
 class FoodInput(BaseModel):
     taco_id:int;grams:float;nome:str='';class_id:Optional[int]=None;note:str=''
 class RecalculateRequest(BaseModel):
@@ -96,6 +119,18 @@ def get_profile():return profile_get()
 @app.put('/api/profile')
 def put_profile(body:Profile):
     profile_save(body.model_dump());return {'ok':True,'profile':profile_get()}
+
+@app.get('/api/profile/opcoes')
+def profile_options():
+    """Objetivos e níveis de atividade aceitos, com os rótulos para a interface."""
+    return {'objetivos':[{'id':k,'nome':v[0]} for k,v in OBJETIVOS.items()],
+            'atividades':[{'id':k,'nome':v[1]} for k,v in ATIVIDADES.items()]}
+
+@app.post('/api/profile/calcular')
+def profile_calculate(body:CalculoMetas):
+    """Calcula metas diárias pelas medidas (Mifflin-St Jeor + objetivo). Não salva: a pessoa revisa antes."""
+    try:return calcular_metas(**body.model_dump())
+    except ValueError as e:raise HTTPException(422,str(e))
 
 @app.get('/api/foods')
 def all_foods():

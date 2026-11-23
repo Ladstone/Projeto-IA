@@ -1,7 +1,7 @@
 const $ = (id)=>document.getElementById(id);
 const STATE={file:null,crop:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[]};
 function showStatus(id,message,error=false){const el=$(id);el.textContent=message;el.classList.toggle('error',error);}
-const FIELD_LABELS={kcal:'Meta energética',proteina_g:'Proteínas',carboidrato_g:'Carboidratos',lipideos_g:'Gorduras',refeicoes:'Refeições por dia',objetivo:'Objetivo',grams:'Gramas',taco_id:'Alimento TACO'};
+const FIELD_LABELS={kcal:'Meta energética',proteina_g:'Proteínas',carboidrato_g:'Carboidratos',lipideos_g:'Gorduras',refeicoes:'Refeições por dia',objetivo:'Objetivo',sexo:'Sexo',idade:'Idade',peso_kg:'Peso',altura_cm:'Altura',atividade:'Nível de atividade',grams:'Gramas',taco_id:'Alimento TACO'};
 // Erros 422 do FastAPI chegam como lista [{loc,msg}]: transforma em texto legível.
 function formatApiError(detail){
  if(typeof detail==='string')return detail;
@@ -10,8 +10,10 @@ function formatApiError(detail){
 }
 async function api(url,opts={}){let res=await fetch(url,opts);let body;try{body=await res.json();}catch{throw new Error(`Resposta inválida (${res.status})`)}if(!res.ok)throw new Error(formatApiError(body.detail));return body;}
 const numeric=(v)=>Number(v||0);
-function getProfileForm(){return {objetivo:$('goal').value,kcal:numeric($('kcal').value),proteina_g:numeric($('protein').value),carboidrato_g:numeric($('carbs').value),lipideos_g:numeric($('fats').value),refeicoes:numeric($('meals').value)};}
-function fillProfile(p){$('goal').value=p.objetivo;$('kcal').value=p.kcal;$('protein').value=p.proteina_g;$('carbs').value=p.carboidrato_g;$('fats').value=p.lipideos_g;$('meals').value=p.refeicoes;}
+const optNum=(v)=>v===''||v==null?null:Number(v);
+const bodyForm=()=>({sexo:$('sex').value||null,idade:optNum($('age').value),peso_kg:optNum($('weight').value),altura_cm:optNum($('height').value),atividade:$('activity').value||null});
+function getProfileForm(){return {...bodyForm(),objetivo:$('goal').value,kcal:numeric($('kcal').value),proteina_g:numeric($('protein').value),carboidrato_g:numeric($('carbs').value),lipideos_g:numeric($('fats').value),refeicoes:numeric($('meals').value)};}
+function fillProfile(p){$('goal').value=p.objetivo;$('sex').value=p.sexo||'';$('age').value=p.idade??'';$('weight').value=p.peso_kg??'';$('height').value=p.altura_cm??'';$('activity').value=p.atividade||'';$('kcal').value=p.kcal;$('protein').value=p.proteina_g;$('carbs').value=p.carboidrato_g;$('fats').value=p.lipideos_g;$('meals').value=p.refeicoes;}
 async function saveProfile(e){if(e)e.preventDefault();try{await api('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(getProfileForm())});showStatus('profileStatus','✓ Metas salvas e usadas no cálculo.');if(STATE.foods.length)await recalc();setTimeout(()=>{$('goalsDialog').close();showStatus('profileStatus','');},700);}catch(e){showStatus('profileStatus','Não foi possível salvar: '+e.message,true);}}
 // Cores das classes vêm do CSS (--class-N), as mesmas do overlay gerado no backend.
 const classColor=(id)=>getComputedStyle(document.documentElement).getPropertyValue(`--class-${id}`).trim()||'#9aa59f';
@@ -115,7 +117,7 @@ async function showFoodDetails(id){
 function renderFullNutrition(data){const parent=$('detailNutrients');parent.replaceChildren();if(!data||!data.detalhamento){return};data.detalhamento.forEach(n=>{
  const row=document.createElement('div');row.className='nutrient-line';const name=document.createElement('span');name.textContent=n.nome;const num=document.createElement('strong');num.textContent=n.valor!==null?`${n.valor.toLocaleString('pt-BR',{maximumFractionDigits:2})} ${n.unidade}`:n.dados_ausentes_em.length?'Não calculável (dado ausente)':'—';if(n.valor===null)num.className='nutrient-missing';row.append(name,num);parent.append(row);
  });}
-async function setup(){const [health,profile,foods]=await Promise.all([api('/api/health'),api('/api/profile'),api('/api/foods')]);$('baseCount').textContent=`${health.taco_records} alimentos · ${health.taco_fields} nutrientes`;fillProfile(profile);STATE.taco=foods.foods;STATE.tacoMap=new Map(STATE.taco.map(f=>[f.id,f]));STATE.classes=foods.class_map;const fragment=document.createDocumentFragment();STATE.taco.forEach(f=>{const op=document.createElement('option');op.value=f.nome;fragment.append(op)});$('tacoOptions').append(fragment);renderCatalog();}
+async function setup(){const [health,profile,foods,options]=await Promise.all([api('/api/health'),api('/api/profile'),api('/api/foods'),api('/api/profile/opcoes')]);fillSelect('goal',options.objetivos);fillSelect('activity',options.atividades,true);$('baseCount').textContent=`${health.taco_records} alimentos · ${health.taco_fields} nutrientes`;fillProfile(profile);STATE.taco=foods.foods;STATE.tacoMap=new Map(STATE.taco.map(f=>[f.id,f]));STATE.classes=foods.class_map;const fragment=document.createDocumentFragment();STATE.taco.forEach(f=>{const op=document.createElement('option');op.value=f.nome;fragment.append(op)});$('tacoOptions').append(fragment);renderCatalog();}
 $('profileForm').addEventListener('submit',saveProfile);$('file').addEventListener('change',e=>selectFile(e.target.files[0]));$('dropArea').addEventListener('click',()=>{$('file').click()});$('dropArea').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}});
 ['dragenter','dragover'].forEach(event=>$('dropArea').addEventListener(event,e=>{e.preventDefault();$('dropArea').classList.add('dragover')}));['dragleave','drop'].forEach(event=>$('dropArea').addEventListener(event,e=>{e.preventDefault();$('dropArea').classList.remove('dragover')}));$('dropArea').addEventListener('drop',e=>selectFile(e.dataTransfer.files[0]));
 $('changeBtn').addEventListener('click',()=>$('file').click());$('analyzeBtn').addEventListener('click',analyze);$('overlaySwitch').addEventListener('change',e=>$('dropArea').classList.toggle('show-overlay',e.target.checked&&Boolean($('overlay').src)));
@@ -191,3 +193,22 @@ $('cropCanvas').addEventListener('pointermove',e=>{if(!CROP.img)return;const p=c
  else CROP.rect=cropFromPoints(d.anchor,p);
  drawCrop();});
 ['pointerup','pointercancel'].forEach(ev=>$('cropCanvas').addEventListener(ev,()=>{if(!CROP.drag)return;CROP.drag=null;showStatus('cropStatus','Clique em "Analisar recorte" ou continue ajustando.');}));
+
+// Metas pelas medidas: o backend calcula (Mifflin-St Jeor + objetivo) e a página só preenche os campos.
+function fillSelect(id,items,keepBlank=false){const sel=$(id);const current=sel.value;if(!keepBlank)sel.replaceChildren();else sel.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
+ items.forEach(it=>{const op=document.createElement('option');op.value=it.id;op.textContent=it.nome;sel.append(op);});if(current)sel.value=current;}
+async function calcGoals(){
+ const box=$('calcResult');box.classList.remove('error');box.replaceChildren();
+ const body={...bodyForm(),objetivo:$('goal').value};
+ const missing=[['sexo','sexo'],['idade','idade'],['peso_kg','peso'],['altura_cm','altura'],['atividade','nível de atividade']].filter(([k])=>body[k]==null).map(([,n])=>n);
+ if(missing.length){box.classList.add('error');box.textContent='Preencha '+missing.join(', ')+' para calcular.';return;}
+ try{
+  const r=await api('/api/profile/calcular',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  $('kcal').value=r.kcal;$('protein').value=r.proteina_g;$('carbs').value=r.carboidrato_g;$('fats').value=r.lipideos_g;
+  const head=document.createElement('strong');head.textContent=`${r.kcal} kcal · ${r.proteina_g} g proteína · ${r.carboidrato_g} g carboidrato · ${r.lipideos_g} g gordura por dia`;
+  const ul=document.createElement('ul');r.explicacao.forEach(t=>{const li=document.createElement('li');li.textContent=t;ul.append(li);});
+  box.append(head,ul);r.avisos.forEach(t=>{const w=document.createElement('div');w.className='warn';w.textContent='⚠ '+t;box.append(w);});
+  const foot=document.createElement('div');foot.textContent='Os campos abaixo foram preenchidos. Ajuste se quiser e clique em "Salvar metas".';box.append(foot);
+ }catch(e){box.classList.add('error');box.textContent='Não foi possível calcular: '+e.message;}
+}
+$('calcGoals').addEventListener('click',calcGoals);

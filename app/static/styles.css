@@ -223,6 +223,14 @@ dialog::backdrop { background: rgba(20, 26, 23, .45); }
 .drawer .dialog-body { overflow-y: auto; flex: 1; align-content: start; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
 .form-grid .full { grid-column: 1 / -1; }
+.calc-box { border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s3) var(--s4) var(--s4); display: grid; gap: var(--s3); margin: 0; }
+.calc-box legend { font-size: var(--fs-sm); font-weight: 600; padding: 0 var(--s1); }
+.calc-box .btn { justify-self: start; }
+.calc-result:empty { display: none; }
+.calc-result { font-size: var(--fs-xs); background: var(--primary-soft); border-radius: var(--r-sm); padding: var(--s3); display: grid; gap: var(--s1); }
+.calc-result ul { margin: 0; padding-left: 1.1em; }
+.calc-result .warn { color: var(--warn); font-weight: 600; }
+.calc-result.error { background: var(--surface-2); color: var(--danger); font-weight: 600; }
 .tip { font-size: var(--fs-xs); color: var(--muted); background: var(--surface-2); padding: var(--s3); border-radius: var(--r-sm); }
 .catalog-row { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
 .catalog-info { flex: 1; min-width: 0; display: grid; }
