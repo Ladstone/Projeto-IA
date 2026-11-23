@@ -6,7 +6,7 @@
 <meta name="description" content="PratoMetria — análise de refeições por visão computacional e TACO"/>
 <title>PratoMetria</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232f6b4f'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%23f6f4ef'/%3E%3C/svg%3E"/>
-<link rel="stylesheet" href="/static/styles.css?v=12"/>
+<link rel="stylesheet" href="/static/styles.css?v=13"/>
 </head>
 <body>
 <header class="site-header">
@@ -32,17 +32,6 @@
     <label class="toggle" title="Mostrar as regiões coloridas da IA"><input id="overlaySwitch" type="checkbox" checked/> Mostrar regiões</label></div>
    <div class="actions"><button id="analyzeBtn" class="btn btn-primary" type="button" disabled>Analisar refeição</button><button id="cropBtn" class="btn" type="button" disabled title="Marque só o prato quando ele ocupa pouco da foto">Recortar no prato</button><button id="changeBtn" class="btn" type="button">Trocar foto</button></div>
    <div id="analysisStatus" role="status" class="status"></div>
-   <div class="examples">
-    <div class="examples-title">Ou experimente uma foto dos datasets</div>
-    <div class="example-row">
-     <button class="ex" type="button" data-example="lunch"><img src="/static/examples/lunch.jpg" alt=""/>Almoço</button>
-     <button class="ex" type="button" data-example="rice"><img src="/static/examples/rice.jpg" alt=""/>Arroz</button>
-     <button class="ex" type="button" data-example="bean"><img src="/static/examples/bean.jpg" alt=""/>Feijão</button>
-     <button class="ex" type="button" data-example="chicken_breast"><img src="/static/examples/chicken_breast.jpg" alt=""/>Frango</button>
-     <button class="ex" type="button" data-example="salad"><img src="/static/examples/salad.jpg" alt=""/>Salada</button>
-     <button class="ex" type="button" data-example="steak"><img src="/static/examples/steak.jpg" alt=""/>Bife</button>
-    </div>
-   </div>
   </section>
 
   <section class="card" aria-labelledby="foodsTitle">
@@ -149,6 +138,6 @@
   <p class="muted"><a href="/api/taco/pdf" target="_blank" rel="noopener">Abrir a TACO original (PDF)</a> para ácidos graxos e aminoácidos.</p></div>
 </dialog>
 
-<script src="/static/app.js?v=12" defer></script>
+<script src="/static/app.js?v=13" defer></script>
 </body>
 </html>

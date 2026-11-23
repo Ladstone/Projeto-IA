@@ -26,7 +26,7 @@ O v1 (U-Net pequena, 160 × 160, `models/unified_21class_v1.pt`) foi descrito or
 
 ### Entradas diferentes, previsões diferentes — mas não necessariamente corretas
 
-O endpoint `POST /api/analyze` executa o modelo para cada foto, escolhe classes a partir de mapas de previsão e devolve `vision_debug` com regiões, scores e limiares. **Não** possui roteiro que devolve sempre arroz, feijão etc. Um teste automatizado verifica que duas fotografias de exemplo produzem máscaras diferentes. Isso não é evidência de precisão nutricional; é só evidência de inferência não-fixa.
+O endpoint `POST /api/analyze` executa o modelo para cada foto, escolhe classes a partir de mapas de previsão e devolve `vision_debug` com regiões, scores e limiares. **Não** possui roteiro que devolve sempre arroz, feijão etc. Um teste automatizado verifica que duas fotografias de teste (`tests/fixtures/`) produzem máscaras diferentes. Isso não é evidência de precisão nutricional; é só evidência de inferência não-fixa.
 
 ### Limites dos nutrientes
 

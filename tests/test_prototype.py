@@ -49,7 +49,7 @@ def test_invalid_photo():
 
 
 def test_local_image_inference_returns_real_data():
-    image=(Path(__file__).parents[1]/'app'/'static'/'examples'/'lunch.jpg').read_bytes()
+    image=(Path(__file__).parent/'fixtures'/'lunch.jpg').read_bytes()
     res=client.post('/api/analyze',files={'file':('test.jpg',image,'image/jpeg')})
     assert res.status_code==200
     data=res.json()

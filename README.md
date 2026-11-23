@@ -73,7 +73,7 @@ PratoMetria/
 │   ├── vision.py             modelos v1 (U-Net) e v2 (MobileNetV3 + LR-ASPP) e predição por foto
 │   ├── unified_classes.py    21 categorias visuais e hipóteses de mapeamento TACO
 │   ├── nutrition.py          597 alimentos, porções, metas e sugestões
-│   ├── static/               HTML, CSS, JavaScript e exemplos
+│   ├── static/               HTML, CSS e JavaScript
 │   └── data/                 TACO CSV/JSON/PDF; SQLite local criado no primeiro uso
 ├── models/                   pesos treinados e metadados de validação
 ├── scripts/                  leitura e treinamento com os dois datasets

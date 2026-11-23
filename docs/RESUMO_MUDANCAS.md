@@ -9,7 +9,7 @@ Comparação da versão original (commit `7a9a682`) com a versão atual da `main
   - **Fase A:** correções no pipeline.
   - **Frontend novo.**
   - **Fase B:** um novo modelo de IA (v2), treinado de outro jeito e avaliado em fotos separadas.
-- **Estado:** tudo está na `main` e no GitHub. O app usa o **v2**, treinado por 20 épocas. O v2 piloto (3 épocas) e o v1 estão guardados como backup. Os testes passam (32 passam com os datasets disponíveis; sem eles, 2 são pulados).
+- **Estado:** tudo está na `main` e no GitHub. O app usa o **v2**, treinado por 20 épocas. O v2 piloto (3 épocas) e o v1 estão guardados como backup. Os testes passam (48 com os datasets disponíveis; sem eles, 46 passam e 2 são pulados).
 - **É um protótipo:** a identificação continua experimental.
 
 ## 2. O que mudou
@@ -36,6 +36,7 @@ O resumo nutricional ficava abaixo do catálogo de 597 alimentos e havia 4 aviso
 - Cada alimento sugerido pela IA tem um selo "Sugestão da IA". O selo "IA local · experimental" do cabeçalho e o aviso amarelo "A identificação por IA é experimental" foram removidos em 17/11/2026.
 - No celular a página vira uma coluna só, com uma barra de kcal fixa no rodapé.
 - O redesenho em si não mudou o backend nem a API.
+- Os botões "experimente uma foto dos datasets" foram removidos em 22/11/2026, para a página não parecer demonstração; as fotos foram para `tests/fixtures/`.
 - Foi verificado com 20 checagens automáticas em navegador (desktop e celular).
 - **Recorte no prato (21/11/2026):** ao escolher a foto, abre uma janela com um recorte já sugerido em volta da comida (`POST /api/crop-suggestion`). O usuário ajusta (move, redimensiona ou marca outro) e só então a análise roda, no recorte ou na foto inteira. Ajuda quando o prato ocupa pouco da foto: no teste com uma foto da internet, a carne só foi encontrada com o recorte. A área mínima de 3% vale sobre o recorte, mas as gramas e a "% da foto" continuam calculadas sobre a foto original (`area_original`), para o recorte não inflar as porções.
 - Uma análise automática em duas passadas (recortar e reanalisar a 320 px) foi testada e **descartada**: no conjunto de teste, as fotos do MyFood com algum alimento inventado subiram de 8% para 13,5–20%.
@@ -110,7 +111,7 @@ Abra http://127.0.0.1:8000.
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest -q
 ```
-O resultado esperado é **30 passam e 2 são pulados**. Os 2 pulados precisam dos ZIPs dos datasets; com eles, passam os 32.
+O resultado esperado é **46 passam e 2 são pulados**. Os 2 pulados precisam dos ZIPs dos datasets (na pasta acima do repositório ou indicados por `PRATOMETRIA_DATASET_MYFOOD` e `PRATOMETRIA_DATASET_BRAZIL`); com eles, passam os 48.
 
 ## 5. Branches e como trocar de modelo
 
@@ -171,7 +172,7 @@ Códigos de verificação (SHA-256) dos ZIPs usados: ver `docs/DATASETS.md`.
 - que as recomendações são orientação clínica.
 
 **Licenças:**
-- **Fotos de exemplo** (`app/static/examples/`): a licença ainda não foi verificada. Se não for possível confirmar, removam as fotos e os botões de exemplo antes de publicar.
+- **Fotos de exemplo:** os botões de exemplo foram removidos da página em 22/11/2026. As fotos eram imagens do conjunto de teste do MyFood (CC BY 4.0); cinco delas seguem em `tests/fixtures/`, usadas só pelos testes, com crédito em `tests/fixtures/CREDITOS.md`.
 - **MyFood:** **CC BY 4.0** (verificado no Zenodo em 21/11/2026). Permite redistribuir com crédito. Citar: Freitas, C. N. C.; Cordeiro, F. R.; Macario, V. *MyFood: A Food Segmentation and Classification System to Aid Nutritional Monitoring*. SIBGRAPI 2020 ([arXiv:2012.03087](https://arxiv.org/abs/2012.03087)); dataset em [MyFood Dataset](https://doi.org/10.5281/zenodo.4041488) (Zenodo, DOI 10.5281/zenodo.4041488).
 - **Brazilian Food Images:** o repositório de origem, [brazilianfoodimage/dataset](https://github.com/brazilianfoodimage/dataset) (GitHub), **não declara licença** nem autor (verificado em 21/11/2026). A informação anterior de que seria CC BY 4.0 não se confirmou. Sem licença, vale "todos os direitos reservados": usar para estudo é razoável, mas **não republicar** o dataset sem autorização do dono. Citar o repositório na apresentação.
 - **TACO:** citar NEPA/UNICAMP, 4ª ed., 2011.

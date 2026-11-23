@@ -4,7 +4,7 @@ from PIL import Image
 from app.vision import VisionService
 
 ROOT = Path(__file__).parents[1]
-LUNCH = ROOT / 'app' / 'static' / 'examples' / 'lunch.jpg'
+LUNCH = Path(__file__).parent / 'fixtures' / 'lunch.jpg'
 
 
 def test_active_model_is_v2_full():

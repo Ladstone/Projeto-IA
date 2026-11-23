@@ -12,7 +12,7 @@ from app.main import app, load_image, suggest_grams, MIN_REGION_FRACTION
 from app.unified_classes import FOOD_CLASS_MAP
 
 client = TestClient(app)
-EXAMPLES = Path(__file__).parents[1] / 'app' / 'static' / 'examples'
+EXAMPLES = Path(__file__).parent / 'fixtures'
 
 
 def _jpeg_with_orientation(size, orientation):

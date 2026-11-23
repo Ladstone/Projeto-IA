@@ -33,7 +33,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 ## Como demonstrar com transparência
 
 1. Configurar metas.
-2. Enviar a foto de demonstração `app/static/examples/lunch.jpg` e observar as sugestões.
+2. Enviar a foto de um prato, ajustar o recorte sugerido e observar as sugestões. Use fotos tiradas pela equipe; a página não tem mais fotos de exemplo.
 3. Se um item estiver errado, abrir a busca TACO e substituí-lo por um preparo correto; mostrar o recálculo de nutrientes.
 4. Mostrar que o módulo visual chama uma rede local (`app/vision.py`) e usa pesos de `models/unified_21class.pt`.
 5. Mostrar que o treinamento lê **MyFood e Brazilian Food Images** (`scripts/train_v2.py`) e explicar a supervisão parcial das máscaras brasileiras e a comparação v1 × piloto × v2 (`docs/RESUMO_MUDANCAS.md`, seção 3).
@@ -45,4 +45,4 @@ O repositório é https://github.com/Ladstone/Projeto-IA (branch `main`). Antes 
 
 ## Limitações de redistribuição
 
-Os arquivos ZIP originais de imagens não foram incorporados ao repositório por tamanho e por ausência de verificação das respectivas licenças. As seis fotografias de exemplo incluídas precisam ter sua permissão/licença conferida pela equipe **antes de publicar um repositório público**. Em caso de dúvida, removê-las e também os botões de exemplo do frontend. A fonte TACO deve permanecer citada.
+Os arquivos ZIP originais de imagens não estão no repositório por tamanho; as fontes e licenças estão em `docs/DATASETS.md` (MyFood: CC BY 4.0; Brazilian Food Images: sem licença declarada, não republicar). As cinco fotos em `tests/fixtures/` são do MyFood, usadas só pelos testes, com crédito em `tests/fixtures/CREDITOS.md`. A fonte TACO deve permanecer citada.
