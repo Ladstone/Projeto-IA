@@ -44,7 +44,7 @@ def test_pure_becomes_potato_milk_and_butter(monkeypatch):
     data = _analyze(monkeypatch)
     pure = [d for d in data['detected'] if d['class_id'] == PURE]
     assert [d['taco_id'] for d in pure] == [91, 458, 261]
-    total = main.suggest_grams(FOOD_CLASS_MAP[PURE]['grams'], 0.20)
+    total = main.suggest_grams(FOOD_CLASS_MAP[PURE]['grams'], pure[0]['cobertura_prato_percent'] / 100)
     assert [d['grams'] for d in pure] == [round(total * 0.80), round(total * 0.16), round(total * 0.04)]
     assert all('receita aproximada' in d['note'] for d in pure)
     # Classes sem receita continuam com um item só.
@@ -54,15 +54,25 @@ def test_pure_becomes_potato_milk_and_butter(monkeypatch):
     assert {91, 458, 261} <= {it['taco_id'] for it in data['nutrition']['alimentos']}
 
 
-def test_crop_keeps_grams_relative_to_original_photo(monkeypatch):
-    """Com recorte, a área mínima vale sobre o recorte, mas gramas e % usam a foto original."""
+def test_crop_is_the_plate_for_grams(monkeypatch):
+    """Com recorte, área mínima e gramas usam o recorte (o prato); "% da foto" usa a foto original."""
     monkeypatch.setattr(main, 'vision', FakeVision())
     raw = BytesIO(); Image.new('RGB', (100, 100), (230, 200, 120)).save(raw, format='PNG')
     data = client.post('/api/analyze', files={'file': ('p.png', raw.getvalue(), 'image/png')},
                        data={'area_original': '0.5'}).json()
     arroz = [d for d in data['detected'] if d['class_id'] == ARROZ][0]
     assert arroz['cobertura_imagem_percent'] == 10.0          # 20% do recorte = 10% da foto
-    assert arroz['grams'] == main.suggest_grams(FOOD_CLASS_MAP[ARROZ]['grams'], 0.10)
+    assert arroz['cobertura_prato_percent'] == 20.0
+    assert arroz['grams'] == main.suggest_grams(FOOD_CLASS_MAP[ARROZ]['grams'], 0.20)
+
+
+def test_without_crop_plate_is_box_around_food(monkeypatch):
+    """Sem recorte, o prato é o retângulo em volta da comida: a distância da câmera não muda a porção."""
+    data = _analyze(monkeypatch)
+    arroz = [d for d in data['detected'] if d['class_id'] == ARROZ][0]
+    # Comida nas linhas 0-40 da foto; com a margem de 5%, o retângulo cobre 45% da foto.
+    assert arroz['cobertura_imagem_percent'] == 20.0
+    assert arroz['cobertura_prato_percent'] == round(20 / 45 * 100, 1)
 
 
 def test_crop_area_out_of_range_is_rejected(monkeypatch):

@@ -49,11 +49,11 @@ def test_invalid_image_still_400():
 
 
 def test_portion_scales_with_area_and_is_bounded():
-    assert suggest_grams(140, 0.20) == 140           # área de referência = porção padrão
-    assert suggest_grams(140, 0.10) == 70            # metade da área, metade da porção
+    assert suggest_grams(140, 0.12) == 140           # área de referência (12% do prato) = porção padrão
+    assert suggest_grams(140, 0.06) == 70            # metade da área, metade da porção
     assert suggest_grams(140, 0.01) == 35            # piso de 25%
-    assert suggest_grams(140, 0.90) == 210           # teto de 150%
-    assert suggest_grams(140, 0.10) % 5 == 0
+    assert suggest_grams(140, 0.90) == 280           # teto de 200%
+    assert suggest_grams(140, 0.07) % 5 == 0
 
 
 def test_detections_respect_minimum_area_and_report_uncalibrated_score():
@@ -63,7 +63,7 @@ def test_detections_respect_minimum_area_and_report_uncalibrated_score():
         for item in data['detected']:
             assert item['cobertura_imagem_percent'] >= MIN_REGION_FRACTION * 100 - 0.05
             assert 'confianca' not in item and 'score_nao_calibrado' in item
-            assert item['grams'] <= item['porcao_padrao_g'] * 1.5
+            assert item['grams'] <= item['porcao_padrao_g'] * 2.0
 
 
 def test_pasta_classes_use_distinct_taco_rows():

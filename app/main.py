@@ -163,9 +163,11 @@ def post_recalculate(body:RecalculateRequest):
 
 # MIN_REGION_FRACTION (área mínima de detecção) fica em app/vision.py para que o app
 # e scripts/evaluate_models.py usem exatamente a mesma regra.
-# Cobertura da imagem que corresponde à porção padrão da categoria. Heurística:
-# um item típico de prato feito ocupa cerca de 1/5 de uma foto de cima.
-REFERENCE_REGION_FRACTION=0.20
+# Fração do PRATO que corresponde à porção padrão da categoria. Medir pelo prato (o recorte,
+# ou o retângulo em volta da comida) e não pela foto inteira faz o valor não depender da
+# distância da câmera. Heurística calibrada a olho num prato feito real, não medição de massa.
+REFERENCE_PLATE_FRACTION=0.12
+MAX_PORTION_SCALE=2.0  # teto: recorte muito justo ou região errada não vira porção absurda
 
 def load_image(raw:bytes)->Image.Image:
     """Abre a imagem enviada e aplica a orientação EXIF (fotos de celular).
@@ -184,14 +186,14 @@ def load_image(raw:bytes)->Image.Image:
         raise HTTPException(413,'Resolução excessiva')
     return image
 
-def suggest_grams(default_grams:float,region_fraction:float)->int:
-    """Porção inicial proporcional à área visível, limitada a 25%-150% da porção padrão.
+def suggest_grams(default_grams:float,plate_fraction:float)->int:
+    """Porção inicial proporcional à área do alimento no prato, limitada a 25%-200% da porção padrão.
 
     A foto NÃO mede massa: é só um ponto de partida que o usuário deve corrigir.
     """
-    scale=min(1.5,max(0.25,region_fraction/REFERENCE_REGION_FRACTION))
+    scale=min(MAX_PORTION_SCALE,max(0.25,plate_fraction/REFERENCE_PLATE_FRACTION))
     grams=int(round(default_grams*scale/5)*5)
-    cap=int(default_grams*1.5//5*5)  # arredonda o teto para baixo, para não ultrapassá-lo
+    cap=int(default_grams*MAX_PORTION_SCALE//5*5)  # arredonda o teto para baixo, para não ultrapassá-lo
     return max(5,min(grams,cap))
 
 @app.post('/api/crop-suggestion')
@@ -217,8 +219,9 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
 
     ``area_original``: quando o usuário recorta a foto em volta do prato, a fração da
     foto original que o recorte ocupa (0-1]. A área mínima de detecção vale sobre o
-    recorte (o que a rede vê), mas as gramas e a "% da foto" usam a foto ORIGINAL,
-    para que recortar não infle as porções.
+    recorte (o que a rede vê) e "% da foto" usa a foto ORIGINAL. As gramas usam a área no
+    PRATO: o recorte, quando há; sem recorte, o retângulo em volta da comida detectada
+    (o mesmo que /api/crop-suggestion sugere). Assim a distância da câmera não muda a porção.
 
     Um pixel pode ter muitas probabilidades independentes; o overlay escolhe só
     a melhor classe elegível. Os candidatos são calculados para CADA imagem.
@@ -236,6 +239,10 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
     with model_lock:
         mask,probs=vision.predict(image)
 
+    plate_area=1.0
+    if area_original>=1:
+        box=food_crop_box(mask)
+        if box:plate_area=max(0.05,(box[2]-box[0])*(box[3]-box[1]))
     detected=[]
     diagnostics=[]
     for class_id,record in FOOD_CLASS_MAP.items():
@@ -257,8 +264,9 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
         base={
             'class_id':class_id,'porcao_padrao_g':record['grams'],'origem':'modelo_local',
             'score_nao_calibrado':round(score,2),'cobertura_imagem_percent':round(frac*area_original*100,1),
+            'cobertura_prato_percent':round(min(1.0,frac/plate_area)*100,1),
         }
-        total=suggest_grams(record['grams'],frac*area_original)
+        total=suggest_grams(record['grams'],min(1.0,frac/plate_area))
         if class_id in RECIPES:
             parts=RECIPES[class_id]
             recipe=', '.join(f"{round(f*100)}% {nome}" for nome,_,f in parts)
@@ -267,10 +275,10 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
                     'grams':max(1,round(total*f)),
                     'note':(f"Parte do {record['nome'].lower()} ({total} g no total; receita aproximada: {recipe}). "
                             'A TACO não tem este preparo pronto; ajuste ou remova cada ingrediente. '
-                            'Porção estimada pela área visível; informe o peso real.')})
+                            'Porção estimada pela área no prato; informe o peso real.')})
             continue
         detected.append({**base,'nome':record['nome'],'taco_id':record['taco_id'],'grams':total,
-            'note':record['note']+'. Porção inicial estimada pela área visível; informe o peso real.'})
+            'note':record['note']+'. Porção inicial estimada pela área no prato; informe o peso real.'})
     detected.sort(key=lambda x:x['cobertura_imagem_percent'],reverse=True)
     diagnostics.sort(key=lambda x:x['regiao_percent'],reverse=True)
     overlay=None

@@ -26,7 +26,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 
 1. **Falsos positivos:** o v2 reduziu bastante o problema (8% das fotos de teste do MyFood com algum alimento inexistente, contra 94% no v1), mas ainda acontece. Classes com poucos exemplos (Milho, Macarrão) são as mais fracas.
 2. **Separação treino/avaliação:** o conjunto brasileiro possui máscaras individuais por classe; é necessário avaliar fotos novas de pratos completos com anotações multiclasse antes de afirmar acurácia geral.
-3. **Estimativa de peso:** a porção inicial é a porção padrão da categoria escalada pela área visível (20% da foto = porção padrão; limitada a 25%–150%). É uma heurística, **não uma medição de massa**. O usuário deve informar os gramas.
+3. **Estimativa de peso:** a porção inicial é a porção padrão da categoria escalada pela área que o alimento ocupa **no prato**: o recorte ou, sem recorte, o retângulo em volta da comida (12% do prato = porção padrão; limitada a 25%–200%). Assim a distância da câmera não muda a porção. É uma heurística, **não uma medição de massa**. O usuário deve informar os gramas.
 4. **Tipo de preparo:** "frango" visual é mapeado provisoriamente para peito grelhado; o usuário precisa confirmar ou substituir.
 5. **Recomendações:** atualmente são regras e comparações com metas por refeição. Não é orientação clínica.
 

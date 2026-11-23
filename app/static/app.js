@@ -36,7 +36,7 @@ function renderFoods(){
   const top=document.createElement('div');top.className='food-top';const color=document.createElement('div');color.className='food-color';color.style.background=it.class_id?classColor(it.class_id):'var(--line)';top.append(color);
   const info=document.createElement('div');info.style.minWidth='0';info.style.flex='1';const name=document.createElement('div');name.className='food-name';name.textContent=STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
   const sub=document.createElement('div');sub.className='food-sub';const badge=document.createElement('span');
-  if(it.class_id){badge.className='badge badge-ai';badge.textContent=`⚠ Sugestão da IA · ${it.cobertura_imagem_percent}% da foto`;}else{badge.className='badge badge-manual';badge.textContent='✓ Escolhido por você';}
+  if(it.class_id){badge.className='badge badge-ai';badge.textContent=`⚠ Sugestão da IA · ${it.cobertura_prato_percent}% do prato`;}else{badge.className='badge badge-manual';badge.textContent='✓ Escolhido por você';}
   sub.append(badge);info.append(name,sub);top.append(info);outer.append(top);
   const controls=document.createElement('div');controls.className='food-controls';
   const gramsWrap=document.createElement('label');gramsWrap.className='grams';const gramsUnit=document.createElement('span');gramsUnit.textContent='g';
