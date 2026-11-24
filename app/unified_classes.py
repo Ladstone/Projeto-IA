@@ -5,7 +5,7 @@ não anotações de imagens. Cada correspondência nutricional é uma HIPÓTESE 
 """
 CLASSES={
  1:('Arroz',3,125,'Arroz branco tipo 1 cozido — preparo presumido'),
- 2:('Feijão',567,110,'Feijão-preto cozido como referência; confirme o tipo'),
+ 2:('Feijão',561,110,''),  # linha da TACO escolhida pela cor da região: ver VARIANTES
  3:('Frango',410,130,'Peito sem pele grelhado como aproximação; confirme o corte e preparo'),
  4:('Carne bovina',377,130,'Patinho sem gordura grelhado como aproximação'),
  5:('Salada',78,65,'Alface crespa crua como referência: misturas têm composição diferente'),
@@ -41,6 +41,9 @@ PALETTE=['#70b8ee','#8f6e50','#edaa6b','#b96564','#6fbc92','#e5b84c','#ecce79','
          '#3f9e5a','#d8c48f','#7fa7c9','#c9955c','#b58fc4','#9c5b3c','#d9734e']
 LABEL_COLORS={k:PALETTE[k-1] for k in CLASSES}
 FOOD_CLASS_MAP={k:{'nome':a[0],'taco_id':a[1],'grams':a[2],'note':a[3]} for k,a in CLASSES.items()}
+# A rede só sabe que é feijão; o tipo sai da cor da região na foto. Mais da metade dos pixels
+# escuros -> feijão preto (#567); senão carioca (#561, o mais consumido). Na tela aparece só o nome genérico.
+VARIANTES={2:{'nome_exibido':'Feijão cozido','escuro':567,'claro':561}}
 # Preparos que a TACO não tem como item único: a classe vira vários itens da TACO.
 # Frações em massa de uma receita caseira típica, editáveis pelo usuário.
 # Purê: 1 kg de batata cozida + 200 g de leite integral + 50 g de manteiga (~1250 g) -> 80/16/4.

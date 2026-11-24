@@ -34,7 +34,7 @@ function renderFoods(){
  STATE.foods.forEach((it,idx)=>{
   const outer=document.createElement('div');outer.className='food-row';
   const top=document.createElement('div');top.className='food-top';const color=document.createElement('div');color.className='food-color';color.style.background=it.class_id?classColor(it.class_id):'var(--line)';top.append(color);
-  const info=document.createElement('div');info.style.minWidth='0';info.style.flex='1';const name=document.createElement('div');name.className='food-name';name.textContent=STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
+  const info=document.createElement('div');info.style.minWidth='0';info.style.flex='1';const name=document.createElement('div');name.className='food-name';name.textContent=it.nome_exibido||STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
   const sub=document.createElement('div');sub.className='food-sub';const badge=document.createElement('span');
   if(it.class_id){badge.className='badge badge-ai';badge.textContent=`⚠ Sugestão da IA · ${it.cobertura_prato_percent}% do prato`;}else{badge.className='badge badge-manual';badge.textContent='✓ Escolhido por você';}
   sub.append(badge);info.append(name,sub);top.append(info);outer.append(top);
@@ -42,9 +42,9 @@ function renderFoods(){
   const gramsWrap=document.createElement('label');gramsWrap.className='grams';const gramsUnit=document.createElement('span');gramsUnit.textContent='g';
   const grams=document.createElement('input');grams.type='number';grams.inputMode='numeric';grams.value=it.grams;grams.min='1';grams.max='2500';grams.step='5';grams.title='Quantidade em gramas';grams.setAttribute('aria-label',`Gramas de ${it.nome}`);grams.addEventListener('change',()=>{STATE.foods[idx].grams=Math.max(1,Math.min(2500,Number(grams.value)||1));recalc();});
   gramsWrap.append(grams,gramsUnit);
-  const selector=document.createElement('input');selector.type='search';selector.setAttribute('list','tacoOptions');selector.placeholder='Trocar por outro alimento da TACO';selector.setAttribute('aria-label',`Corrigir alimento pela TACO: ${it.nome}`);selector.title='Digite qualquer nome da TACO para corrigir a sugestão da IA';selector.value=STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
+  const selector=document.createElement('input');selector.type='search';selector.setAttribute('list','tacoOptions');selector.placeholder='Trocar por outro alimento da TACO';selector.setAttribute('aria-label',`Corrigir alimento pela TACO: ${it.nome}`);selector.title='Digite qualquer nome da TACO para corrigir a sugestão da IA';selector.value=it.nome_exibido||STATE.tacoMap.get(Number(it.taco_id))?.nome||it.nome;
   selector.addEventListener('change',()=>{const entry=foodLookup(selector.value);if(!entry){showStatus('analysisStatus','Não encontrei este alimento na TACO. Abra a tabela e pesquise.',true);return;}
-    STATE.foods[idx].taco_id=entry.id;STATE.foods[idx].nome=entry.nome;STATE.foods[idx].class_id=null;STATE.foods[idx].origem='manual';STATE.foods[idx].score_nao_calibrado=null;STATE.foods[idx].note='Alimento corrigido manualmente; confira o peso.';renderFoods();recalc();showStatus('analysisStatus',`Corrigido para ${entry.nome}.`);});
+    STATE.foods[idx].taco_id=entry.id;STATE.foods[idx].nome=entry.nome;STATE.foods[idx].nome_exibido=null;STATE.foods[idx].class_id=null;STATE.foods[idx].origem='manual';STATE.foods[idx].score_nao_calibrado=null;STATE.foods[idx].note='Alimento corrigido manualmente; confira o peso.';renderFoods();recalc();showStatus('analysisStatus',`Corrigido para ${entry.nome}.`);});
   const remove=document.createElement('button');remove.type='button';remove.className='remove-btn';remove.textContent='×';remove.title='Remover alimento';remove.setAttribute('aria-label',`Remover ${it.nome}`);remove.addEventListener('click',()=>{STATE.foods.splice(idx,1);renderFoods();recalc()});
   controls.append(gramsWrap,selector,remove);outer.append(controls);
   const note=document.createElement('div');note.className='food-note';note.textContent=it.note||'Confirme a massa e o preparo. A fotografia não mede gramas.';outer.append(note);

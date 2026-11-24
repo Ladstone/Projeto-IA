@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
 from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
-from .unified_classes import RECIPES
+from .unified_classes import RECIPES, VARIANTES
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
@@ -191,6 +191,15 @@ def load_image(raw:bytes)->Image.Image:
         raise HTTPException(413,'Resolução excessiva')
     return image
 
+DARK_LUMINANCE=60   # pixel com brilho médio (0-255) abaixo disto conta como escuro
+DARK_SHARE=0.5      # fração de pixels escuros a partir da qual a variante é a "escura" (ex.: feijão preto)
+
+def dark_fraction(image:Image.Image,mask:np.ndarray,class_id:int)->float:
+    """Fração dos pixels da classe que são escuros, na foto reduzida ao tamanho da máscara."""
+    small=np.asarray(image.resize((mask.shape[1],mask.shape[0]),Image.Resampling.BILINEAR),dtype=np.float32)
+    px=small[mask==class_id]
+    return float((px.mean(axis=1)<DARK_LUMINANCE).mean()) if len(px) else 0.0
+
 def suggest_grams(default_grams:float,plate_fraction:float)->int:
     """Porção inicial proporcional à área do alimento no prato, limitada a 25%-200% da porção padrão.
 
@@ -283,8 +292,14 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
                             'A TACO não tem este preparo pronto; ajuste ou remova cada ingrediente. '
                             'Porção estimada pela área no prato; informe o peso real.')})
             continue
-        detected.append({**base,'nome':record['nome'],'taco_id':record['taco_id'],'grams':total,
-            'note':record['note']+'. Porção inicial estimada pela área no prato; informe o peso real.'})
+        taco_id,extra=record['taco_id'],{}
+        if class_id in VARIANTES:
+            v=VARIANTES[class_id]
+            taco_id=v['escuro'] if dark_fraction(image,mask,class_id)>=DARK_SHARE else v['claro']
+            extra={'nome_exibido':v['nome_exibido']}
+        note='Porção inicial estimada pela área no prato; informe o peso real.'
+        detected.append({**base,**extra,'nome':record['nome'],'taco_id':taco_id,'grams':total,
+            'note':f"{record['note']}. {note}" if record['note'] else note})
     detected.sort(key=lambda x:x['cobertura_imagem_percent'],reverse=True)
     diagnostics.sort(key=lambda x:x['regiao_percent'],reverse=True)
     overlay=None
