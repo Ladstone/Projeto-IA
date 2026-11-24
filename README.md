@@ -101,13 +101,16 @@ Assim dá para mostrar o v2 em `http://127.0.0.1:8000` e o v3 em `http://127.0.0
 
 ### Combinação v2+v3 (em teste na porta 8001)
 
-O v2 decide os pratos comuns e o v3 só entra quando a foto tem uma das 7 categorias novas (então a foto inteira usa o v3). No mini teste com fotos reais foi o melhor resultado até agora, e nas fotos brasileiras do teste fica igual ao v2. Números em `docs/AVALIACAO.md`. Ainda precisa ser testado com fotos novas antes de virar o modelo do app.
+O v2 decide os pratos comuns e o v3 só entra quando uma das 7 categorias novas cobre 10% ou mais do prato (então a foto inteira usa o v3). No mini teste com fotos reais foi o melhor resultado até agora, e nas fotos brasileiras do teste fica igual ao v2. Números em `docs/AVALIACAO.md`. Ainda precisa ser testado com fotos novas antes de virar o modelo do app.
 
 ```powershell
 $env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
 $env:PRATOMETRIA_MODEL_NOVAS = "models/unified_28class_v3.pt"
+$env:PRATOMETRIA_MODEL_PURE = "models/unified_28class_v3d.pt"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
+
+`PRATOMETRIA_MODEL_PURE` (opcional) põe o **purê do v3d** por cima da combinação: o v2 chamava purê de arroz ou frango e via purê em só 1% das fotos de teste de purê; com o v3d, 90%. O v3d foi treinado com 300 fotos de purê do dataset "mashed potato" do images.cv, rotuladas automaticamente por `scripts/pseudo_pure.py` (ver `docs/AVALIACAO.md`). Nos scripts de avaliação: `base.pt+novas.pt|pure.pt`.
 
 Os scripts de avaliação aceitam a combinação como `base.pt+novas.pt`, por exemplo `--model v2+v3=models/unified_21class_v2.pt+models/unified_28class_v3.pt`.
 

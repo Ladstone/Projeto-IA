@@ -1,8 +1,35 @@
 # Avaliação e limitações verificadas
 
+### Purê do v3d por cima da combinação (porta 8001, em teste desde 24/11/2026)
+
+**Problema:** o v2 quase não conhece purê. Em 1.298 fotos de purê de batata (dataset "mashed potato" do images.cv, 256 × 256, só com a etiqueta "tem purê"), o v2 viu purê em **1%** e chamou a maior parte de **arroz** (47%), frango ou carne. No "almoço jpão" o purê saía como frango.
+
+**v3c (não usado no app):** retreino a partir dos pesos do v2 em que o MyFoodRepo só ensina as 7 classes novas, cenoura e purê (o resto das fotos suíças vira "outro alimento"; `--init-from`, `--mfr-old-classes 11:300,16:200`, `--brazil-weight 2`). Viu purê em 64% das fotos do images.cv, mas sozinho perde frango, farofa e salada do prato feito (26/35 no mini teste).
+
+**v3d (`models/unified_28class_v3d.pt`):** o mesmo treino do v3c + 300 fotos de purê do images.cv (60 na validação) com **pseudo-rótulo** (`scripts/pseudo_pure.py`):
+- foto com um alimento só (uma classe ≥ 85% da comida): toda a comida vira purê, mesmo que o modelo tenha dito arroz (143 das 300 fotos de treino eram assim);
+- foto com mais coisas: só os pixels que o v3c já chamava de purê;
+- fora da máscara a foto não ensina nada (pode ter purê não marcado). Teto de 300 fotos para o purê não dominar o treino.
+- As 196 fotos da divisão "test" do zip **não entraram no treino** e servem de teste independente.
+
+Melhor época 7 de 8; F1 de presença na validação 0,82 (purê 0,83, arroz 0,97). Sozinho, o v3d continua mais fraco que o v2 no prato feito, por isso no app entra **só o purê dele**: onde o v3d marca purê, o pixel vira purê; o resto vem da combinação v2+v3 (`ClassOverrideService` em `app/vision.py`, variável `PRATOMETRIA_MODEL_PURE`).
+
+| | v2+v3 | **v2+v3 + purê do v3d** |
+|---|---|---|
+| Purê achado nas 196 fotos de teste do images.cv | 9/196 (5%) | **176/196 (90%)** |
+| Purê inventado em 366 fotos de validação sem purê (MyFood + brasileiro) | 10 | 15 |
+| Fotos de validação com arroz em que o arroz some | 53/166 | 53/166 |
+| Mini teste: prato feito, achados | 29/35 | 29/35 |
+| Mini teste: outros, achados | 4/8 | **5/8** |
+| Mini teste: inventados | 4 | 5 (purê no hambúrguer) |
+
+Fotos novas de 24/11: "almoço jpão" passa de arroz, carne e **frango** para arroz, carne e **purê**. No "almoço caio" aparece o purê, mas o frango sai quase todo como carne e o arroz some (o purê muda o recorte sugerido). "almoço 2 daniel" e "almoço ladstone" ficam iguais. Cada foto passa por três modelos; na prática a demora não é perceptível.
+
+**Cuidados:** os rótulos de purê vêm de um modelo (v3c), então parte do que o v3d aprendeu são acertos do próprio v3c; o teste das 196 fotos mede se generalizou. A decisão de usar só o purê foi tomada olhando o mini teste e as 4 fotos de 24/11, que por isso ficam otimistas. O app principal (porta 8000) continua só com o v2.
+
 ### Combinação v2+v3 (porta 8001, em teste desde 24/11/2026)
 
-O app passa a foto nos dois modelos. Se o v3 acha alguma **categoria nova** (Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer ou Lasanha) com a área mínima de 3%, a foto inteira usa o v3; senão, vale o v2. Assim um prato feito comum fica com o resultado do v2, e o v3 não consegue trocar batata frita por macarrão nem carne por frango. Código: `CombinedVisionService` em `app/vision.py`; ligado pela variável `PRATOMETRIA_MODEL_NOVAS`. O app ativo (porta 8000) **continua só com o v2**.
+O app passa a foto nos dois modelos. Se o v3 acha alguma **categoria nova** (Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer ou Lasanha) cobrindo **10% ou mais** do recorte, a foto inteira usa o v3; senão, vale o v2 (comida nova menor só entra onde o v2 não viu comida nenhuma). Assim um prato feito comum fica com o resultado do v2, e o v3 não consegue trocar batata frita por macarrão nem carne por frango. Código: `CombinedVisionService` em `app/vision.py`; ligado pela variável `PRATOMETRIA_MODEL_NOVAS`. O app ativo (porta 8000) **continua só com o v2**.
 
 Mini teste com 12 fotos reais de pratos (`docs/FOTOS_REAIS_GABARITO.json`, `scripts/avaliar_fotos_reais.py`):
 
@@ -27,6 +54,8 @@ Teste dos datasets (`docs/METRICAS_COMBINADO.json`):
 | MyFoodRepo: pratos 100% corretos | 7,5% | 34,7% | 27,2% |
 
 **Leitura:** nas fotos brasileiras é idêntico ao v2; no MyFood perde cerca de 1 ponto; no MyFoodRepo fica entre os dois (fotos suíças sem categoria nova vão para o v2, que não conhece aquela comida). **Cuidado:** a regra foi escolhida olhando as mesmas 12 fotos do mini teste, então o resultado nelas é otimista. Antes de virar o modelo do app, testar com fotos novas que ninguém usou para decidir.
+
+**Regra dos 10% (24/11/2026):** a primeira versão trocava para o v3 com 3% (a área mínima). Em fotos novas isso falhou: no "almoço caio" uma cebola de 4% inventada pelo v3 fez a foto perder o frango que o v2 tinha acertado; no "almoço 2 daniel" (penne à bolonhesa) uma lasanha de 8% trouxe junto cenoura no lugar do molho. Com 10%, as duas fotos ficam com o v2. Custo no mini teste: o "hamburguer duarte" perde a batata frita (fotos perfeitas 5/12 → 4/12; prato feito igual). A decisão depende bastante do recorte: no macarrão do Daniel a lasanha do v3 vai de 5,6% a 10,7% conforme o retângulo.
 
 **v3b (descartado):** retreino do v3 sem as fotos de massa e frango do MyFoodRepo e com peso 2 nas fotos brasileiras (`--mfr-skip-classes 8,3 --brazil-weight 2` em `scripts/train_v2.py`). Corrigiu batata frita → macarrão e carne → frango, mas passou a perder o frango e inventou abóbora no "almoço leo". Não foi commitado.
 

@@ -39,6 +39,15 @@ def test_com_comida_nova_vale_o_modelo_novo_na_foto_inteira():
     assert (mask == np.array(COM_NOVA)).all()
 
 
+def test_comida_nova_pequena_nao_troca_e_so_entra_onde_o_base_nao_viu_comida():
+    base = [[1, 1, 3, 3], [1, 1, 3, 3], [1, 1, 3, 3], [0, 0, 0, 0]]
+    nova = [[1, 1, 26, 3], [1, 1, 3, 3], [1, 1, 3, 3], [0, 0, 0, 27]]  # 6% de cebola, 6% de sanduíche
+    c = CombinedVisionService(Fake(21, base, 'v2'), Fake(28, nova, 'v3'))
+    mask, _ = c.predict(None)
+    esperado = np.array(base); esperado[3, 3] = 27  # a cebola em cima do frango não entra; o sanduíche no vazio entra
+    assert (mask == esperado).all()
+
+
 def test_modo_pixel_so_troca_os_pixels_da_classe_nova():
     c = CombinedVisionService(Fake(21, BASE, 'v2'), Fake(28, COM_NOVA, 'v3'), modo='pixel')
     mask, _ = c.predict(None)
@@ -62,3 +71,13 @@ def test_v2_mais_v3_reais_carregam_e_preveem():
     assert isinstance(c, CombinedVisionService) and c.n_base == 21 and c.n_class == 28
     mask, probs = c.predict(Image.open(LUNCH))
     assert mask.shape == (224, 224) and probs.shape == (28, 224, 224)
+
+
+def test_pure_do_especialista_vale_por_cima_do_resto():
+    """Porta 8001: onde o v3d marca purê (16), vale purê; o resto continua como o modelo principal disse."""
+    from app.vision import ClassOverrideService
+    especialista = [[16, 16, 3, 4]] * 4    # purê onde o base viu arroz; frango/carne do especialista não valem
+    c = ClassOverrideService(Fake(21, BASE, 'v2'), Fake(28, especialista, 'v3d'))
+    mask, probs = c.predict(None)
+    assert (mask == np.array([[16, 16, 3, 3]] * 4)).all()
+    assert probs.shape == (21, 4, 4) and c.thresholds[16] == 0.16

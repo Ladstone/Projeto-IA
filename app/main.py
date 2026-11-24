@@ -13,8 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
-from .vision import VisionService, CombinedVisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
-from .unified_classes import RECIPES, VARIANTES, NOMES_EXIBIDOS
+from .vision import VisionService, CombinedVisionService, ClassOverrideService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
+from .unified_classes import RECIPES, VARIANTES, NOMES_EXIBIDOS, RECEITAS_UM_ITEM, RECEITA_ID_BASE
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
@@ -85,6 +85,8 @@ try:
         # Opcional: PRATOMETRIA_MODEL_NOVAS=outro .pt com mais classes (ex.: v3). Fotos com comida nova usam
         # esse modelo; as demais continuam com o PRATOMETRIA_MODEL. Ver CombinedVisionService em vision.py.
         if os.getenv('PRATOMETRIA_MODEL_NOVAS'):vision=CombinedVisionService(vision,VisionService(Path(os.environ['PRATOMETRIA_MODEL_NOVAS'])))
+        # Opcional: PRATOMETRIA_MODEL_PURE=modelo especialista (ex.: v3d) cujo Purê vale por cima do resultado acima.
+        if os.getenv('PRATOMETRIA_MODEL_PURE'):vision=ClassOverrideService(vision,VisionService(Path(os.environ['PRATOMETRIA_MODEL_PURE'])))
     else:model_error='Arquivo do modelo ainda não encontrado. Rode scripts/train_unified.py.'
 except Exception as exc:
     model_error=f'Não foi possível carregar pesos: {exc}'
@@ -286,7 +288,7 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
             'cobertura_prato_percent':round(min(1.0,frac/plate_area)*100,1),
         }
         total=suggest_grams(record['grams'],min(1.0,frac/plate_area))
-        if class_id in RECIPES:
+        if class_id in RECIPES and class_id not in RECEITAS_UM_ITEM:
             parts=RECIPES[class_id]
             recipe=', '.join(f"{round(f*100)}% {nome}" for nome,_,f in parts)
             for nome,taco_id,f in parts:
@@ -296,8 +298,9 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
                             'A TACO não tem este preparo pronto; ajuste ou remova cada ingrediente. '
                             'Porção estimada pela área no prato; informe o peso real.')})
             continue
-        taco_id=record['taco_id']
-        extra={'nome_exibido':NOMES_EXIBIDOS[class_id]} if class_id in NOMES_EXIBIDOS else {}
+        taco_id=RECEITA_ID_BASE+class_id if class_id in RECEITAS_UM_ITEM else record['taco_id']
+        nome_curto=RECEITAS_UM_ITEM.get(class_id) or NOMES_EXIBIDOS.get(class_id)
+        extra={'nome_exibido':nome_curto} if nome_curto else {}
         if class_id in VARIANTES:
             v=VARIANTES[class_id]
             taco_id=v['escuro'] if dark_fraction(image,mask,class_id)>=DARK_SHARE else v['claro']

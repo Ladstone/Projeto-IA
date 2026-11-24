@@ -43,6 +43,23 @@ class Logger:
             f.write(line + '\n')
 
 
+def init_from(model, path):
+    """Copia os pesos de outro modelo da mesma arquitetura. Nas camadas de saída copia as primeiras classes
+    (as que os dois têm); as classes a mais continuam com a inicialização aleatória. Retorna quantas copiou."""
+    src = torch.load(path, map_location='cpu', weights_only=True)
+    dst = model.state_dict()
+    n = None
+    for k, v in src.items():
+        if dst[k].shape == v.shape:
+            dst[k] = v
+        else:  # camada de saída: (classes, ...) com menos classes no modelo de origem
+            assert dst[k].shape[1:] == v.shape[1:] and v.shape[0] < dst[k].shape[0], k
+            dst[k][:v.shape[0]] = v
+            n = v.shape[0]
+    model.load_state_dict(dst)
+    return n
+
+
 def masked_loss(logits, target, known):
     """BCE só em pixels conhecidos (positivos com peso 5) + Dice nos pares (imagem, classe) com positivos."""
     weights = known * (1 + 4 * target)
@@ -128,6 +145,10 @@ def main():
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--mfr-skip-classes', default='', help='ids comuns separados por vírgula; fotos de TREINO do MyFoodRepo com essas classes ficam de fora (ex.: 8,3 = Macarrão, Frango)')
     p.add_argument('--brazil-weight', type=float, default=1.0, help='multiplica a chance de sortear fotos do dataset brasileiro')
+    p.add_argument('--mfr-old-classes', default=None, help='v3c: "id:teto,..." (ex.: 11:300,16:200). O MyFoodRepo só ensina as '
+                   'classes novas e estas; as outras antigas viram "outro alimento". Texto vazio = nenhuma antiga.')
+    p.add_argument('--mashed', default='', help='npz de purê com pseudo-rótulo (scripts/pseudo_pure.py)')
+    p.add_argument('--init-from', default='', help='começa dos pesos de outro modelo (ex.: v2 de 21 classes); saídas a mais começam do zero')
     a = p.parse_args()
     run = Path(a.run_dir); run.mkdir(parents=True, exist_ok=True)
     log = Logger(run / 'train.log')
@@ -136,15 +157,18 @@ def main():
 
     t0 = time.time()
     skip = [int(x) for x in a.mfr_skip_classes.split(',') if x.strip()]
-    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_skip_classes=skip)
-    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None), train)
+    old = None if a.mfr_old_classes is None else {int(k): int(v) for k, v in (x.split(':') for x in a.mfr_old_classes.split(',') if x.strip())}
+    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_skip_classes=skip, mfr_old_classes=old, mashed_npz=a.mashed or None)
+    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_old_classes=old, mashed_npz=a.mashed or None), train)
     n_syn = int(round(a.synthetic_frac * len(train)))
     log('DADOS treino', len(train), 'validacao', len(val), 'quase-duplicatas removidas da val', removed,
         'sinteticas/epoca', n_syn, f'({time.time() - t0:.0f}s)')
     per_src = lambda recs: dict(Counter(r['src'] for r in recs))
     log('  por fonte: treino', per_src(train), 'validacao', per_src(val), '| classes', N_CLASS)
-    log('  opcoes: MyFoodRepo sem classes', skip, '| peso brasileiro', a.brazil_weight)
-    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo), mfr_skip_classes=skip, brazil_weight=a.brazil_weight), ensure_ascii=False), encoding='utf-8')
+    log('  opcoes: MyFoodRepo sem classes', skip, '| peso brasileiro', a.brazil_weight, '| MyFoodRepo classes antigas', old, '| init', a.init_from or '-', '| purê pseudo', a.mashed or '-')
+    log('  imagens MyFoodRepo por categoria (treino):', dict(sorted(Counter(r['category'] for r in train if r['src'] in ('myfoodrepo', 'mfr_novas')).items())))
+    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo), mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
+                                                     mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed), ensure_ascii=False), encoding='utf-8')
 
     tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn)
     tr_ds.py_rng.seed(a.seed)
@@ -153,6 +177,8 @@ def main():
     va_loader = DataLoader(FoodDataset(val, a.dimension), batch_size=a.batch, shuffle=False, num_workers=0)
 
     model = build_model('lraspp_mobilenet_v3', pretrained_backbone=True)
+    if a.init_from:
+        log('  pesos iniciais de', a.init_from, '| classes copiadas na saída:', init_from(model, a.init_from))
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
     steps = len(tr_loader)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda_factory(a.epochs * steps, steps))
@@ -216,7 +242,7 @@ def main():
                     thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                     min_region_fraction=MIN_REGION_FRACTION, best_epoch=info['epoch'], epochs_trained=len(history),
                     val_presence_macro_f1=info['val_presence_macro_f1'], val_mean_iou_at_thresholds=info['val_mean_iou_at_thresholds'],
-                    mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
+                    mfr_skip_classes=skip, brazil_weight=a.brazil_weight, mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed,
                     train_size=len(train), val_size=len(val), synthetic_per_epoch=n_syn, val_near_duplicates_removed=removed,
                     selection='época e limiares escolhidos SÓ na validação; teste nunca usado no treino')
         out.with_suffix('.json').write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')

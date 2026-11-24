@@ -1,4 +1,4 @@
-"""Classes sem item único na TACO viram vários ingredientes (ex.: Purê = batata + leite + manteiga)."""
+"""Classes sem item único na TACO: Purê vira um item só calculado pela receita; Hambúrguer e Lasanha, vários ingredientes."""
 from io import BytesIO
 
 import numpy as np
@@ -37,21 +37,37 @@ def test_recipes_are_valid():
     for class_id, parts in RECIPES.items():
         assert class_id in FOOD_CLASS_MAP
         assert abs(sum(f for _, _, f in parts) - 1) < 1e-9
-        assert all(taco_id in FOODS for _, taco_id, _ in parts)
+        assert all(taco_id in FOODS for _, taco_id, _ in parts if taco_id is not None)  # None = água
 
 
-def test_pure_becomes_potato_milk_and_butter(monkeypatch):
+def test_pure_is_one_item_computed_from_the_recipe(monkeypatch):
     data = _analyze(monkeypatch)
     pure = [d for d in data['detected'] if d['class_id'] == PURE]
-    assert [d['taco_id'] for d in pure] == [91, 458, 261]
+    assert len(pure) == 1 and pure[0]['taco_id'] == 9016 and pure[0]['nome_exibido'] == 'Purê'
+    assert pure[0]['note'] == 'Porção inicial estimada pela área no prato; informe o peso real.'
     total = main.suggest_grams(FOOD_CLASS_MAP[PURE]['grams'], pure[0]['cobertura_prato_percent'] / 100)
-    assert [d['grams'] for d in pure] == [round(total * 0.80), round(total * 0.16), round(total * 0.04)]
-    assert all('receita aproximada' in d['note'] for d in pure)
+    assert pure[0]['grams'] == total
+    # 100 g de purê = 80 g de batata + 2 g de leite em pó + 14 g de água + 4 g de manteiga.
+    esperado = sum(FOODS[t]['kcal'] * f for _, t, f in RECIPES[PURE] if t is not None)
+    assert abs(FOODS[9016]['kcal'] - esperado) < 0.01 and 60 < esperado < 90
+    assert all(FOODS[9016][k] is not None for k in ('kcal', 'proteina_g', 'carboidrato_g', 'lipideos_g'))
+    # Gordura: a batata não tem o dado na TACO; soma leite em pó + manteiga e avisa.
+    assert abs(FOODS[9016]['lipideos_g'] - (0.02 * 26.9 + 0.04 * 82.4)) < 0.01
+    assert 'Batata' in FOODS[9016]['marcadores']['lipideos_g']
+    item = [it for it in data['nutrition']['alimentos'] if it['taco_id'] == 9016][0]
+    assert abs(item['nutrientes']['kcal'] - esperado * total / 100) < 0.01
     # Classes sem receita continuam com um item só.
     arroz = [d for d in data['detected'] if d['class_id'] == ARROZ]
     assert len(arroz) == 1 and arroz[0]['taco_id'] == FOOD_CLASS_MAP[ARROZ]['taco_id']
-    # Os nutrientes somam os três ingredientes.
-    assert {91, 458, 261} <= {it['taco_id'] for it in data['nutrition']['alimentos']}
+
+
+def test_pure_recipe_details_and_recalculate():
+    det = client.get('/api/taco/9016').json()
+    assert det['nome'].startswith('Purê (receita: 80%') and 'TACO' in det['fonte']
+    res = client.post('/api/recalculate', json={'items': [{'taco_id': 9016, 'grams': 200}]})
+    assert res.status_code == 200
+    # Não aparece na lista de busca da TACO (continua com os 597 itens oficiais).
+    assert all(f['id'] < 9000 for f in client.get('/api/foods').json()['foods'])
 
 
 def test_crop_is_the_plate_for_grams(monkeypatch):

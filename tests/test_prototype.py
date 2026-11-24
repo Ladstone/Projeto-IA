@@ -7,7 +7,7 @@ client=TestClient(app)
 
 
 def test_taco_597_items():
-    assert len(FOODS)==597
+    assert len([i for i in FOODS if i < 9000])==597  # 9000+ = receitas calculadas (ex.: purê)
     assert FOODS[3]['nome']=='Arroz, tipo 1, cozido'
     assert FOODS[3]['kcal']==128.0
 

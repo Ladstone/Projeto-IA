@@ -39,6 +39,10 @@ pastaredsauce 27; pumpkin 27; rice 57; salad 69; tomato 48.
 - **Fotos de treino por categoria nova (total no dataset):** Pão 5.611 (somando os tipos de pão), Batata cozida 644, Peixe 423 (fish + salmon), Brócolis 421, Cebola 285, Hambúrguer (sanduíche) 154, Lasanha 104.
 - **SHA-256:** `00afdf97a392e6baaf6e1bd13c5487917227b8e4030847f804c79ab165aa7879`
 
+## Purê de batata do images.cv (desde o v3d, 24/11/2026)
+
+`mashed p.zip`: 1.298 fotos de purê de batata (classe `mashed_potato`) em 256 × 256, já divididas em train 908 / val 194 / test 196, baixadas do images.cv. Só tem a etiqueta "a foto tem purê", sem máscara. `scripts/pseudo_pure.py` gera a máscara com o v3c (foto de um alimento só: toda a comida; senão, onde o v3c diz purê) e usa no máximo 300 fotos de treino e 60 de validação com purê em pelo menos 10% da foto. A divisão `test` não entra no treino: é o teste independente de purê. A versão de 32 × 32 (`mashed.zip`) foi descartada por ser pequena demais. SHA-256 de `mashed p.zip`: `04bb3734605e22ccdf56d1688f3cefd00c6ba87a96d3105f070ddd782078af20`.
+
 ## Fontes, licenças e verificação
 
 | Dataset | Fonte | Licença (verificada em 21/11/2026) |

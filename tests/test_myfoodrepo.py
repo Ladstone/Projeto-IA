@@ -73,3 +73,44 @@ def test_real_myfoodrepo_val_if_zip_available(archive):
     assert all(r['label'].shape == (64, 64) and r['img'].shape == (64, 64, 3) for r in recs)
     assert any((r['label'] == 22).any() for r in recs)     # algum brócolis de verdade
     assert MFR_CAPS['train'] == (150, 50)
+
+
+def test_v3c_old_classes_become_unknown_except_kept(monkeypatch):
+    """--mfr-old-classes: no MyFoodRepo, frango vira "outro alimento"; purê (mantido) continua rotulado."""
+    import io, zipfile
+    from PIL import Image
+    import scripts.data_v2 as d
+    img = io.BytesIO(); Image.new('RGB', (100, 100), (200, 180, 150)).save(img, format='JPEG')
+    ann = dict(images=[dict(id=i, file_name=f'{i}.jpg', width=100, height=100) for i in range(40)],
+               categories=[dict(id=1, name='chicken'), dict(id=2, name='mashed-potatoes-prepared-with-full-fat-milk-with-butter'),
+                           dict(id=3, name='broccoli')],
+               annotations=[a for i in range(40) for a in (dict(image_id=i, category_id=1, segmentation=SQUARE_LEFT),
+                                                         dict(image_id=i, category_id=2 if i % 2 else 3, segmentation=SQUARE_RIGHT))])
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as z:
+        z.writestr(d.MFR_PREFIX + 'annotations.json', json.dumps(ann))
+        for i in range(40):
+            z.writestr(d.MFR_PREFIX + f'images/{i}.jpg', img.getvalue())
+    buf.seek(0)
+    monkeypatch.setattr(d, 'myfoodrepo_split', lambda name: 'train')
+    recs = d.load_myfoodrepo(buf, 'train', dim=20, old_classes={16: 5})
+    assert recs and all(r['src'] == 'mfr_novas' for r in recs)
+    labels = np.stack([r['label'] for r in recs])
+    assert not (labels == 3).any()                       # frango nunca aparece como rótulo
+    assert (labels[:, :, :9] == IGNORE).all()            # o lado do frango vira "outro alimento"
+    assert sum((r['label'] == 16).any() for r in recs) == 5   # purê limitado ao teto pedido
+    # Validação: frango escondido não pode contar como ausente com certeza; brócolis e purê sim.
+    st = presence_status('mfr_novas', recs[0]['label'], None, True)
+    assert st[3 - 1] == -1 and st[22 - 1] in (0, 1) and st[16 - 1] in (0, 1)
+
+
+def test_pure_pseudo_only_marked_pixels_teach():
+    """Purê com pseudo-rótulo: dentro da máscara é purê (e não as outras classes); fora, desconhecido."""
+    import numpy as np
+    from scripts.data_v2 import targets_for
+    label = np.zeros((4, 4), np.uint8)
+    label[:2] = 1
+    target, known = targets_for('pure_pseudo', label, 16)
+    assert target[15, :2].all() and not target[15, 2:].any()
+    assert known[:, :2].all() and not known[:, 2:].any()
+    assert not np.delete(target, 15, axis=0).any()

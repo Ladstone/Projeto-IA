@@ -8,7 +8,7 @@ from math import isfinite
 DATA = sorted(json.loads((Path(__file__).resolve().parent/'data'/'taco.json').read_text(encoding='utf-8')),key=lambda d:d['id'])
 FOODS = {food['id']:food for food in DATA}
 
-from .unified_classes import FOOD_CLASS_MAP
+from .unified_classes import FOOD_CLASS_MAP, RECIPES, RECEITAS_UM_ITEM, RECEITA_ID_BASE
 
 # A Tabela 1 inclui a composição centesimal + minerais + vitaminas + colesterol.
 # Tabelas 2 (ácidos graxos) e 3 (aminoácidos) permanecem integralmente disponíveis no PDF local.
@@ -24,6 +24,29 @@ FIELDS=[
  ('vitamina_a_rae_ug','Vitamina A (RAE)','µg'),('tiamina_mg','Tiamina (B1)','mg'),
  ('riboflavina_mg','Riboflavina (B2)','mg'),('piridoxina_mg','Piridoxina (B6)','mg'),
  ('niacina_mg','Niacina (B3)','mg'),('vitamina_c_mg','Vitamina C','mg')]
+def _receita(class_id, nome):
+    """Item calculado: média ponderada (em massa) dos ingredientes TACO.
+
+    Campo sem dado em TODOS os ingredientes fica ausente. Se falta só em alguns (ex.: gordura da batata,
+    que é traço; fibra do leite e da manteiga), soma os que têm e anota quais ficaram de fora.
+    """
+    parts = RECIPES[class_id]
+    taco = [(t, f) for _, t, f in parts if t is not None]  # taco_id None = água: zero de tudo
+    food = {'id': RECEITA_ID_BASE + class_id, 'receita': True,
+            'nome': f"{nome} (receita: " + ', '.join(f"{round(f*100)}% {FOODS[t]['nome'] if t else 'água'}" for _, t, f in parts) + ')',
+            'fonte': 'Calculado a partir da TACO 4ª edição: ' + ', '.join(f"#{t}" for t, _ in taco)}
+    food['marcadores'] = {}
+    for field, _, _ in FIELDS:
+        vals = [nval(FOODS[t], field) for t, _ in taco]
+        if all(v is None for v in vals):
+            food[field] = None
+            continue
+        food[field] = round(sum(v * f for v, (_, f) in zip(vals, taco) if v is not None), 3)
+        sem = [FOODS[t]['nome'] for v, (t, _) in zip(vals, taco) if v is None]
+        if sem:
+            food['marcadores'][field] = 'soma parcial; sem dado na TACO para: ' + '; '.join(sem)
+    return food
+
 META=[{'campo':field,'nome':label,'unidade':unit} for field,label,unit in FIELDS]
 NUTRIENTS=['kcal','proteina_g','carboidrato_g','lipideos_g','fibra_g']
 TARGET_FIELDS=['kcal','proteina_g','carboidrato_g','lipideos_g']
@@ -31,6 +54,9 @@ TARGET_FIELDS=['kcal','proteina_g','carboidrato_g','lipideos_g']
 def nval(food,field):
     v=food.get(field)
     return float(v) if isinstance(v,(int,float)) and isfinite(v) else None
+
+for _cid, _nome in RECEITAS_UM_ITEM.items():
+    FOODS[RECEITA_ID_BASE + _cid] = _receita(_cid, _nome)
 
 def details(food_id):
     try: food=FOODS[int(food_id)]

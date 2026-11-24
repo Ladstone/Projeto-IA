@@ -19,7 +19,7 @@ CLASSES={
  13:('Bife à milanesa',340,130,'Contra-filé à milanesa como aproximação'),
  14:('Farofa',131,40,'Farofa de mandioca temperada como aproximação'),
  15:('Beterraba',97,60,'Beterraba cozida como aproximação'),
- 16:('Purê',91,115,'Sem item na TACO: lançado como batata cozida + leite integral + manteiga (ver RECIPES)'),
+ 16:('Purê',91,115,''),  # sem item na TACO: um item só, calculado pela receita (ver RECEITAS_UM_ITEM)
  17:('Massa com molho vermelho',37,140,'Massa fresca cozida como PROXY (a TACO não tem massa ao sugo): acrescente "Tomate, molho industrializado" (#159) para o molho'),
  18:('Repolho',149,55,'Repolho branco cru como aproximação'),
  19:('Milho',45,70,'Milho verde enlatado e drenado como aproximação'),
@@ -49,13 +49,19 @@ NOMES_EXIBIDOS={1:'Arroz',3:'Frango',4:'Carne bovina'}
 # Preparos que a TACO não tem como item único: a classe vira vários itens da TACO.
 # Frações em massa de uma receita caseira típica, editáveis pelo usuário.
 # Purê: 1 kg de batata cozida + 200 g de leite integral + 50 g de manteiga (~1250 g) -> 80/16/4.
+# O leite integral líquido da TACO (#458) não tem energia nem macronutrientes, então os 16% de leite
+# entram como leite integral em pó (#459, 2%) + água (14%; taco_id None = água, zero de tudo).
 RECIPES={
- 16:(('batata',91,0.80),('leite integral',458,0.16),('manteiga com sal',261,0.04)),
+ 16:(('batata',91,0.80),('leite integral em pó',459,0.02),('água',None,0.14),('manteiga com sal',261,0.04)),
  # Sanduíche: pão (~60 g; a TACO não tem pão de hambúrguer, usa o francês) + hambúrguer (~90 g) -> 40/60.
  27:(('pão',53,0.40),('hambúrguer grelhado',417,0.60)),
  # Lasanha à bolonhesa caseira, frações em massa do prato montado e assado.
  28:(('massa',37,0.40),('carne moída',326,0.25),('molho de tomate',159,0.20),('muçarela',463,0.15)),
 }
+# Receitas mostradas como UM item só (nome curto na tela). Os nutrientes por 100 g são a média
+# ponderada dos ingredientes de RECIPES; o item ganha um id fora da faixa da TACO (9000 + classe).
+RECEITAS_UM_ITEM={16:'Purê'}
+RECEITA_ID_BASE=9000
 BRAZIL_LABELS={
  'rice':1,'beans':2,'chicken':3,'beef':4,'salad':5,'fries':6,'egg':7,'noodles':8,
  'tomato':10,'carrot':11,'pumpkin':12,'milanesesteak':13,'farofa':14,'beet':15,

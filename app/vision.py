@@ -136,18 +136,22 @@ class CombinedVisionService:
     """Combina dois modelos: ``base`` (ex.: v2, 21 classes, melhor no prato feito) e ``novas``
     (ex.: v3, 28 classes, que conhece brócolis, lasanha, hambúrguer etc.).
 
-    modo ``'foto'`` (padrão): se o modelo novo acha alguma classe nova (22+) com a área mínima, a foto
-    inteira usa o resultado dele; senão vale o modelo base. Num prato feito sem comida nova o resultado
-    é o do v2 (o v3 não troca batata frita por macarrão nem carne por frango).
+    modo ``'foto'`` (padrão):
+    - se o modelo novo acha uma classe nova (22+) cobrindo pelo menos ``troca_minima`` (10%) da imagem,
+      a foto inteira usa o resultado dele;
+    - senão vale o modelo base; pixels de classe nova só entram onde o base não viu comida nenhuma
+      (assim a sugestão de recorte inclui um sanduíche que o v2 não conhece, sem apagar o que o v2 viu).
+    Com 3% (a área mínima), uma "cebola" de 4% ou uma "lasanha" de 8% inventadas pelo v3 faziam a foto
+    inteira trocar de modelo e perder o frango ou a carne que o v2 tinha acertado (fotos reais, 24/11/2026).
     modo ``'pixel'``: vale a máscara do base, e só os pixels que o modelo novo marca como classe nova são
     trocados (o base continua decidindo o resto da foto, inclusive onde inventaria frango numa lasanha).
     Mesma interface de ``VisionService`` (predict, thresholds, metadata, n_class).
     """
 
-    def __init__(self, base: VisionService, novas: VisionService, modo='foto'):
+    def __init__(self, base: VisionService, novas: VisionService, modo='foto', troca_minima=0.10):
         if modo not in ('foto', 'pixel'):
             raise ValueError(f'modo desconhecido: {modo}')
-        self.modo = modo
+        self.modo, self.troca_minima = modo, troca_minima
         if novas.n_class <= base.n_class:
             raise ValueError('o modelo de classes novas precisa ter mais classes que o modelo base')
         self.base, self.novas = base, novas
@@ -169,19 +173,56 @@ class CombinedVisionService:
             size = (mask_b.shape[1], mask_b.shape[0])
             mask_n = np.asarray(Image.fromarray(mask_n).resize(size, Image.Resampling.NEAREST))
             probs_n = np.stack([np.asarray(Image.fromarray(p).resize(size, Image.Resampling.BILINEAR)) for p in probs_n])
-        if self.modo == 'foto' and any((mask_n == c).mean() >= MIN_REGION_FRACTION for c in range(self.n_base + 1, self.n_class + 1)):
-            return mask_n, probs_n  # a foto tem comida nova: vale o modelo novo inteiro
-        mask = np.where(mask_n > self.n_base, mask_n, mask_b).astype('uint8')
+        nova = mask_n > self.n_base
+        if self.modo == 'foto':
+            maior = max((mask_n == c).mean() for c in range(self.n_base + 1, self.n_class + 1))
+            if maior >= self.troca_minima:
+                return mask_n, probs_n  # comida nova grande: vale o modelo novo na foto inteira
+            nova &= mask_b == 0  # comida nova pequena: só onde o base não viu comida
+        mask = np.where(nova, mask_n, mask_b).astype('uint8')
         probs = np.concatenate([probs_b, probs_n[self.n_base:]], axis=0)
         return mask, probs
 
 
+class ClassOverrideService:
+    """Pega algumas classes de um modelo especialista por cima de outro serviço.
+
+    Ex.: v2 (+v3) chama purê de arroz ou frango; o v3d acerta purê em 90% das fotos de teste. Onde o
+    especialista marca uma das ``classes`` (padrão: 16 = Purê), o pixel vira essa classe; o resto continua
+    como o serviço principal decidiu."""
+
+    def __init__(self, main, especialista: VisionService, classes=(16,)):
+        self.main, self.especialista, self.classes = main, especialista, tuple(classes)
+        self.n_class, self.resolution, self.architecture = main.n_class, main.resolution, main.architecture
+        self.thresholds = {**main.thresholds, **{c: especialista.thresholds[c] for c in self.classes if c in especialista.thresholds}}
+        self.metadata = {**main.metadata, 'label': f"{main.metadata.get('label') or 'modelo'} + "
+                                                   f"{', '.join(str(c) for c in self.classes)} de outro modelo"}
+
+    @torch.no_grad()
+    def predict(self, img: Image.Image, dimension=None):
+        mask, probs = self.main.predict(img, dimension)
+        mask_e, probs_e = self.especialista.predict(img, dimension or mask.shape[0])
+        if mask_e.shape != mask.shape:
+            size = (mask.shape[1], mask.shape[0])
+            mask_e = np.asarray(Image.fromarray(mask_e).resize(size, Image.Resampling.NEAREST))
+            probs_e = np.stack([np.asarray(Image.fromarray(p).resize(size, Image.Resampling.BILINEAR)) for p in probs_e])
+        mask, probs = mask.copy(), probs.copy()
+        for c in self.classes:
+            mask[mask_e == c] = c
+            probs[c - 1] = probs_e[c - 1]
+        return mask, probs
+
+
 def load_vision(spec, root=None):
-    """``"a.pt"`` -> VisionService; ``"a.pt+b.pt"`` -> CombinedVisionService(base=a, novas=b)."""
+    """``"a.pt"`` -> VisionService; ``"a.pt+b.pt"`` -> CombinedVisionService(base=a, novas=b);
+    ``"...|c.pt"`` -> purê (classe 16) vem do modelo c por cima do resto."""
     def resolve(p):
         p = Path(p)
         return p if p.is_absolute() or root is None else Path(root) / p
-    spec, _, modo = str(spec).partition('@')
+    spec, _, especialista = str(spec).partition('|')
+    if especialista:
+        return ClassOverrideService(load_vision(spec, root), VisionService(resolve(especialista)))
+    spec, _, modo = spec.partition('@')
     parts = spec.split('+')
     if len(parts) == 1:
         return VisionService(resolve(parts[0]))

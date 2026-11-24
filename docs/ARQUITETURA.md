@@ -11,7 +11,8 @@ POST /api/analyze (FastAPI)
        |
        v
 VisionService.predict -> pesos PyTorch unified_21class.pt (v2: MobileNetV3 + LR-ASPP, 21 classes; v3 de 28 classes opcional;
-                         CombinedVisionService v2+v3 com PRATOMETRIA_MODEL_NOVAS, em teste)
+                         CombinedVisionService v2+v3 com PRATOMETRIA_MODEL_NOVAS e purê do v3d
+                         com PRATOMETRIA_MODEL_PURE / ClassOverrideService, em teste na porta 8001)
        |
        +--> Máscaras e diagnóstico por classe (hipóteses)
        |

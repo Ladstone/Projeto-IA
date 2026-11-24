@@ -40,6 +40,7 @@ MYFOODREPO_CLASSES = sorted(set(MYFOODREPO_LABELS.values()))  # classes com rót
 # Fontes que anotam TODOS os alimentos da foto -> classes que, se ausentes do rótulo, estão ausentes da foto.
 FULLY_ANNOTATED = {'myfood': MYFOOD_ONLY_CLASSES, 'myfoodrepo': MYFOODREPO_CLASSES}
 MFR_PREFIX = 'raw_data/public_training_set_release_2.0/'
+COMMON_OLD = set(range(1, 22))  # as 21 classes do v2
 # Teto de imagens por classe em cada divisão: (classes novas 22+, classes antigas de reforço).
 MFR_CAPS = {'train': (150, 50), 'val': (30, 10), 'test': (30, 10)}
 
@@ -95,13 +96,15 @@ def select_myfoodrepo(images, anns_by_image, part, caps):
 
     Uma imagem entra se tiver alguma classe ainda abaixo do teto; todas as classes dela contam.
     Classes novas são preferidas como "categoria" da imagem (usada no equilíbrio do sorteio)."""
-    cap_new, cap_old = caps
+    cap_new, cap_old = caps[:2]
+    per_class = caps[2] if len(caps) > 2 else {}  # teto próprio de algumas classes comuns (ex.: {16: 200})
+    limit = lambda c: per_class.get(c, cap_new if c in NEW_CLASSES else cap_old)
     count, chosen = Counter(), []
     for img in sorted(images, key=lambda i: hashlib.sha1(i['file_name'].encode()).hexdigest()):
         if myfoodrepo_split(img['file_name']) != part:
             continue
         classes = {c for c, _ in anns_by_image.get(img['id'], ()) if c is not None}
-        open_ = [c for c in classes if count[c] < (cap_new if c in NEW_CLASSES else cap_old)]
+        open_ = [c for c in classes if count[c] < limit(c)]
         if not open_:
             continue
         count.update(classes)
@@ -109,11 +112,22 @@ def select_myfoodrepo(images, anns_by_image, part, caps):
     return chosen, count
 
 
-def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_classes=()):
+def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_classes=(), old_classes=None):
     """``skip_classes``: ids comuns; imagens que tenham qualquer uma delas ficam de fora
-    (ex.: massa e frango, que no v3 puxavam batata frita e bife para essas classes)."""
+    (ex.: massa e frango, que no v3 puxavam batata frita e bife para essas classes).
+
+    ``old_classes`` (v3c): dict {id comum <= 21: teto de imagens no treino}. Se informado, o MyFoodRepo só
+    ensina as classes novas (22+) e estas; as demais classes antigas viram "outro alimento" (IGNORE), para o
+    estilo suíço de macarrão, frango, carne etc. não mudar o que o modelo aprendeu com as fotos brasileiras.
+    Na validação o teto é 1/5 do treino (mínimo 10)."""
     caps = caps or MFR_CAPS[part]
     skip = set(skip_classes)
+    if old_classes is not None:
+        old_caps = {c: (n if part == 'train' else max(10, n // 5)) for c, n in old_classes.items()}
+        caps = (caps[0], 0, old_caps)  # outras classes antigas: teto 0 (não puxam imagens)
+        # Fonte própria: nessas fotos só as classes novas e as mantidas estão anotadas por completo. Um frango
+        # virado "outro alimento" NÃO pode contar como "frango ausente com certeza" na validação.
+        FULLY_ANNOTATED['mfr_novas'] = sorted(set(NEW_CLASSES) | set(old_classes))
     with zipfile.ZipFile(zip_path) as z:
         data = json.load(z.open(MFR_PREFIX + 'annotations.json'))
         cat_name = {c['id']: c['name'] for c in data['categories']}
@@ -122,6 +136,9 @@ def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_cla
             anns_by_image.setdefault(a['image_id'], []).append((MYFOODREPO_LABELS.get(cat_name[a['category_id']]), a['segmentation']))
         if skip:
             anns_by_image = {k: v for k, v in anns_by_image.items() if not skip & {c for c, _ in v}}
+        if old_classes is not None:
+            keep = lambda c: c is not None and (c not in COMMON_OLD or c in old_classes)
+            anns_by_image = {k: [(c if keep(c) else None, s) for c, s in v] for k, v in anns_by_image.items()}
         chosen, _ = select_myfoodrepo(data['images'], anns_by_image, part, caps)
         records = []
         for img, primary in chosen:
@@ -130,7 +147,7 @@ def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_cla
             if im.size != (img['width'], img['height']):
                 continue  # anotação feita em outra orientação/tamanho: descarta em vez de errar a máscara
             anns = anns_by_image[img['id']]
-            records.append(dict(src='myfoodrepo', category=f'mfr:{primary}', name=img['file_name'], cls=None,
+            records.append(dict(src='myfoodrepo' if old_classes is None else 'mfr_novas', category=f'mfr:{primary}', name=img['file_name'], cls=None,
                                 img=np.asarray(im.resize((dim, dim), Image.Resampling.BILINEAR), dtype=np.uint8),
                                 label=polygons_to_label(anns, *im.size, dim),
                                 has_unknown_food=any(c is None for c, _ in anns),
@@ -138,7 +155,19 @@ def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_cla
     return records
 
 
-def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodrepo_zip=None, mfr_skip_classes=()):
+def load_mashed(npz_path, part):
+    """Fotos de purê com pseudo-rótulo (gerado por scripts/pseudo_pure.py). Fonte 'pure_pseudo': só os
+    pixels marcados ensinam algo (são purê e não são as outras classes); o resto da foto fica desconhecido."""
+    d = np.load(npz_path)
+    if f'{part}_img' not in d:
+        return []
+    return [dict(src='pure_pseudo', category='pure_pseudo', name=str(n), cls=16, img=img, label=label,
+                 has_unknown_food=True, hash=dhash(Image.fromarray(img)), raw=None)
+            for n, img, label in zip(d[f'{part}_names'], d[f'{part}_img'], d[f'{part}_label'])]
+
+
+def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodrepo_zip=None, mfr_skip_classes=(), mfr_old_classes=None,
+                 mashed_npz=None):
     """Lê uma divisão. Cada registro: img (dim x dim x 3), label (dim x dim), metadados."""
     records = []
     with zipfile.ZipFile(myfood_zip) as z:
@@ -180,7 +209,9 @@ def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodre
                                 img=np.asarray(im.resize((dim, dim), Image.Resampling.BILINEAR), dtype=np.uint8),
                                 label=m, has_unknown_food=True, hash=dhash(im), raw=raw if keep_raw else None))
     if myfoodrepo_zip:
-        records += load_myfoodrepo(myfoodrepo_zip, part, dim, keep_raw, skip_classes=mfr_skip_classes)
+        records += load_myfoodrepo(myfoodrepo_zip, part, dim, keep_raw, skip_classes=mfr_skip_classes, old_classes=mfr_old_classes)
+    if mashed_npz:
+        records += load_mashed(mashed_npz, part)
     if not records:
         raise ValueError(f'Nenhuma imagem na divisão {part}')
     return records
@@ -220,6 +251,10 @@ def targets_for(src, label, cls):
         m = label.astype(bool)
         known[:] = m                # pixels anotados: negativos para as outras classes
         known[cls - 1] = 1          # a classe anotada é conhecida em toda a imagem
+        target[cls - 1] = m
+    elif src == 'pure_pseudo':      # pseudo-rótulo: fora da máscara não se sabe nada (pode ter purê não marcado)
+        m = label.astype(bool)
+        known[:] = m
         target[cls - 1] = m
     else:                           # sintética, sem comida
         known[:] = 1
