@@ -130,3 +130,60 @@ class VisionService:
         data = preprocess(arr, self.normalize).unsqueeze(0).to(self.device)
         probs = torch.sigmoid(self.model(data))[0].cpu().numpy()  # (n_class,H,W)
         return exclusive_mask(probs, self.thresholds), probs
+
+
+class CombinedVisionService:
+    """Combina dois modelos: ``base`` (ex.: v2, 21 classes, melhor no prato feito) e ``novas``
+    (ex.: v3, 28 classes, que conhece brócolis, lasanha, hambúrguer etc.).
+
+    modo ``'foto'`` (padrão): se o modelo novo acha alguma classe nova (22+) com a área mínima, a foto
+    inteira usa o resultado dele; senão vale o modelo base. Num prato feito sem comida nova o resultado
+    é o do v2 (o v3 não troca batata frita por macarrão nem carne por frango).
+    modo ``'pixel'``: vale a máscara do base, e só os pixels que o modelo novo marca como classe nova são
+    trocados (o base continua decidindo o resto da foto, inclusive onde inventaria frango numa lasanha).
+    Mesma interface de ``VisionService`` (predict, thresholds, metadata, n_class).
+    """
+
+    def __init__(self, base: VisionService, novas: VisionService, modo='foto'):
+        if modo not in ('foto', 'pixel'):
+            raise ValueError(f'modo desconhecido: {modo}')
+        self.modo = modo
+        if novas.n_class <= base.n_class:
+            raise ValueError('o modelo de classes novas precisa ter mais classes que o modelo base')
+        self.base, self.novas = base, novas
+        self.n_class, self.n_base = novas.n_class, base.n_class
+        self.resolution, self.architecture = base.resolution, base.architecture
+        self.thresholds = {**{k: v for k, v in novas.thresholds.items() if k > self.n_base},
+                           **{k: v for k, v in base.thresholds.items() if k <= self.n_base}}
+        self.metadata = {**base.metadata, 'classes': self.n_class,
+                         'datasets': novas.metadata.get('datasets') or base.metadata.get('datasets'),
+                         'label': f"{base.metadata.get('label') or 'base'} + classes {self.n_base + 1}-{self.n_class} do outro modelo",
+                         'model': f"{base.metadata.get('model', base.architecture)}; classes novas de "
+                                  f"{novas.metadata.get('model', novas.architecture)}"}
+
+    @torch.no_grad()
+    def predict(self, img: Image.Image, dimension=None):
+        mask_b, probs_b = self.base.predict(img, dimension)
+        mask_n, probs_n = self.novas.predict(img, dimension or mask_b.shape[0])
+        if mask_n.shape != mask_b.shape:  # resoluções diferentes: alinha ao modelo base
+            size = (mask_b.shape[1], mask_b.shape[0])
+            mask_n = np.asarray(Image.fromarray(mask_n).resize(size, Image.Resampling.NEAREST))
+            probs_n = np.stack([np.asarray(Image.fromarray(p).resize(size, Image.Resampling.BILINEAR)) for p in probs_n])
+        if self.modo == 'foto' and any((mask_n == c).mean() >= MIN_REGION_FRACTION for c in range(self.n_base + 1, self.n_class + 1)):
+            return mask_n, probs_n  # a foto tem comida nova: vale o modelo novo inteiro
+        mask = np.where(mask_n > self.n_base, mask_n, mask_b).astype('uint8')
+        probs = np.concatenate([probs_b, probs_n[self.n_base:]], axis=0)
+        return mask, probs
+
+
+def load_vision(spec, root=None):
+    """``"a.pt"`` -> VisionService; ``"a.pt+b.pt"`` -> CombinedVisionService(base=a, novas=b)."""
+    def resolve(p):
+        p = Path(p)
+        return p if p.is_absolute() or root is None else Path(root) / p
+    spec, _, modo = str(spec).partition('@')
+    parts = spec.split('+')
+    if len(parts) == 1:
+        return VisionService(resolve(parts[0]))
+    base, novas = parts
+    return CombinedVisionService(VisionService(resolve(base)), VisionService(resolve(novas)), modo or 'foto')

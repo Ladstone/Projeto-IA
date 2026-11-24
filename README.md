@@ -99,6 +99,18 @@ $env:PRATOMETRIA_MODEL = "models/unified_28class_v3.pt"
 
 Assim dá para mostrar o v2 em `http://127.0.0.1:8000` e o v3 em `http://127.0.0.1:8001` ao mesmo tempo.
 
+### Combinação v2+v3 (em teste na porta 8001)
+
+O v2 decide os pratos comuns e o v3 só entra quando a foto tem uma das 7 categorias novas (então a foto inteira usa o v3). No mini teste com fotos reais foi o melhor resultado até agora, e nas fotos brasileiras do teste fica igual ao v2. Números em `docs/AVALIACAO.md`. Ainda precisa ser testado com fotos novas antes de virar o modelo do app.
+
+```powershell
+$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
+$env:PRATOMETRIA_MODEL_NOVAS = "models/unified_28class_v3.pt"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+Os scripts de avaliação aceitam a combinação como `base.pt+novas.pt`, por exemplo `--model v2+v3=models/unified_21class_v2.pt+models/unified_28class_v3.pt`.
+
 ### Modelo v3 (alternativo)
 
 Mesma rede do v2 (MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida), agora com 28 saídas. Categorias novas: **Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer (sanduíche) e Lasanha**; as duas últimas entram na TACO como receita (vários ingredientes). Coxa de frango do MyFoodRepo foi somada a Frango. Treino de 15 épocas em CPU (~3 h, 12 min por época); a melhor época foi a 15 (F1 de presença 0,69 na validação, que agora inclui as fotos difíceis do MyFoodRepo). Época e limiares foram escolhidos **só na validação**.

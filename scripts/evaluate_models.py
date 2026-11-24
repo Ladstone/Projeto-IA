@@ -22,7 +22,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from app.unified_classes import N_CLASS, CLASS_LABELS
-from app.vision import VisionService, detected_classes, MIN_REGION_FRACTION
+from app.vision import load_vision, detected_classes, MIN_REGION_FRACTION
 from scripts.data_v2 import (load_records, drop_near_duplicates, presence_status, synthetic_eval_set,
                              TRAIN_SYNTHETIC_KINDS, MYFOOD_ONLY_CLASSES, MYFOODREPO_CLASSES, IGNORE)
 
@@ -164,7 +164,7 @@ def main():
                   modelos={})
     for spec in a.model:
         name, path = spec.split('=', 1)
-        s = time.time(); service = VisionService(ROOT / path if not Path(path).is_absolute() else Path(path))
+        s = time.time(); service = load_vision(path, ROOT)
         res = dict(arquivo=path, arquitetura=service.architecture, resolucao=service.resolution,
                    myfood=eval_myfood(service, myfood, a.dimension), brasileiro=eval_brazil(service, brazil, a.dimension),
                    sem_comida_sinteticas=eval_synthetic(service, synthetic))

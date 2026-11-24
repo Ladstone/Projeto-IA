@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
-from .vision import VisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
+from .vision import VisionService, CombinedVisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
 from .unified_classes import RECIPES, VARIANTES
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
@@ -80,7 +80,11 @@ model_error=None
 try:
     import torch
     torch.set_num_threads(3)
-    if MODEL.exists():vision=VisionService(MODEL)
+    if MODEL.exists():
+        vision=VisionService(MODEL)
+        # Opcional: PRATOMETRIA_MODEL_NOVAS=outro .pt com mais classes (ex.: v3). Fotos com comida nova usam
+        # esse modelo; as demais continuam com o PRATOMETRIA_MODEL. Ver CombinedVisionService em vision.py.
+        if os.getenv('PRATOMETRIA_MODEL_NOVAS'):vision=CombinedVisionService(vision,VisionService(Path(os.environ['PRATOMETRIA_MODEL_NOVAS'])))
     else:model_error='Arquivo do modelo ainda não encontrado. Rode scripts/train_unified.py.'
 except Exception as exc:
     model_error=f'Não foi possível carregar pesos: {exc}'

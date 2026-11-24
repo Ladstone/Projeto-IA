@@ -126,6 +126,8 @@ def main():
     p.add_argument('--run-dir', default=str(ROOT / 'models' / 'runs' / 'v2'))
     p.add_argument('--out', default='', help='Se informado, grava o melhor modelo final (.pt + .json) aqui')
     p.add_argument('--seed', type=int, default=42)
+    p.add_argument('--mfr-skip-classes', default='', help='ids comuns separados por vírgula; fotos de TREINO do MyFoodRepo com essas classes ficam de fora (ex.: 8,3 = Macarrão, Frango)')
+    p.add_argument('--brazil-weight', type=float, default=1.0, help='multiplica a chance de sortear fotos do dataset brasileiro')
     a = p.parse_args()
     run = Path(a.run_dir); run.mkdir(parents=True, exist_ok=True)
     log = Logger(run / 'train.log')
@@ -133,18 +135,20 @@ def main():
     random.seed(a.seed); np.random.seed(a.seed); torch.manual_seed(a.seed)
 
     t0 = time.time()
-    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None)
+    skip = [int(x) for x in a.mfr_skip_classes.split(',') if x.strip()]
+    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_skip_classes=skip)
     val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None), train)
     n_syn = int(round(a.synthetic_frac * len(train)))
     log('DADOS treino', len(train), 'validacao', len(val), 'quase-duplicatas removidas da val', removed,
         'sinteticas/epoca', n_syn, f'({time.time() - t0:.0f}s)')
     per_src = lambda recs: dict(Counter(r['src'] for r in recs))
     log('  por fonte: treino', per_src(train), 'validacao', per_src(val), '| classes', N_CLASS)
-    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo)), ensure_ascii=False), encoding='utf-8')
+    log('  opcoes: MyFoodRepo sem classes', skip, '| peso brasileiro', a.brazil_weight)
+    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo), mfr_skip_classes=skip, brazil_weight=a.brazil_weight), ensure_ascii=False), encoding='utf-8')
 
     tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn)
     tr_ds.py_rng.seed(a.seed)
-    sampler = WeightedRandomSampler(sample_weights(train, n_syn), num_samples=len(tr_ds), replacement=True)
+    sampler = WeightedRandomSampler(sample_weights(train, n_syn, {'brazil': a.brazil_weight}), num_samples=len(tr_ds), replacement=True)
     tr_loader = DataLoader(tr_ds, batch_size=a.batch, sampler=sampler, num_workers=0, drop_last=True)
     va_loader = DataLoader(FoodDataset(val, a.dimension), batch_size=a.batch, shuffle=False, num_workers=0)
 
@@ -212,6 +216,7 @@ def main():
                     thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                     min_region_fraction=MIN_REGION_FRACTION, best_epoch=info['epoch'], epochs_trained=len(history),
                     val_presence_macro_f1=info['val_presence_macro_f1'], val_mean_iou_at_thresholds=info['val_mean_iou_at_thresholds'],
+                    mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
                     train_size=len(train), val_size=len(val), synthetic_per_epoch=n_syn, val_near_duplicates_removed=removed,
                     selection='época e limiares escolhidos SÓ na validação; teste nunca usado no treino')
         out.with_suffix('.json').write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')

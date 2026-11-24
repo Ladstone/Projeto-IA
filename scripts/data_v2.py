@@ -109,14 +109,19 @@ def select_myfoodrepo(images, anns_by_image, part, caps):
     return chosen, count
 
 
-def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None):
+def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None, skip_classes=()):
+    """``skip_classes``: ids comuns; imagens que tenham qualquer uma delas ficam de fora
+    (ex.: massa e frango, que no v3 puxavam batata frita e bife para essas classes)."""
     caps = caps or MFR_CAPS[part]
+    skip = set(skip_classes)
     with zipfile.ZipFile(zip_path) as z:
         data = json.load(z.open(MFR_PREFIX + 'annotations.json'))
         cat_name = {c['id']: c['name'] for c in data['categories']}
         anns_by_image = {}
         for a in data['annotations']:
             anns_by_image.setdefault(a['image_id'], []).append((MYFOODREPO_LABELS.get(cat_name[a['category_id']]), a['segmentation']))
+        if skip:
+            anns_by_image = {k: v for k, v in anns_by_image.items() if not skip & {c for c, _ in v}}
         chosen, _ = select_myfoodrepo(data['images'], anns_by_image, part, caps)
         records = []
         for img, primary in chosen:
@@ -133,7 +138,7 @@ def load_myfoodrepo(zip_path, part, dim=224, keep_raw=False, caps=None):
     return records
 
 
-def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodrepo_zip=None):
+def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodrepo_zip=None, mfr_skip_classes=()):
     """Lê uma divisão. Cada registro: img (dim x dim x 3), label (dim x dim), metadados."""
     records = []
     with zipfile.ZipFile(myfood_zip) as z:
@@ -175,7 +180,7 @@ def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodre
                                 img=np.asarray(im.resize((dim, dim), Image.Resampling.BILINEAR), dtype=np.uint8),
                                 label=m, has_unknown_food=True, hash=dhash(im), raw=raw if keep_raw else None))
     if myfoodrepo_zip:
-        records += load_myfoodrepo(myfoodrepo_zip, part, dim, keep_raw)
+        records += load_myfoodrepo(myfoodrepo_zip, part, dim, keep_raw, skip_classes=mfr_skip_classes)
     if not records:
         raise ValueError(f'Nenhuma imagem na divisão {part}')
     return records
@@ -320,10 +325,13 @@ class FoodDataset(Dataset):
         return preprocess(np.ascontiguousarray(img), self.normalize), torch.from_numpy(target), torch.from_numpy(known), torch.from_numpy(status)
 
 
-def sample_weights(records, n_synthetic):
-    """Equilibra classes (1/sqrt(frequência)); as sintéticas recebem n_synthetic/len(records) da massa total."""
+def sample_weights(records, n_synthetic, src_weight=None):
+    """Equilibra classes (1/sqrt(frequência)); as sintéticas recebem n_synthetic/len(records) da massa total.
+
+    ``src_weight`` multiplica o peso de cada fonte (ex.: {'brazil': 2.0} sorteia o dobro de fotos brasileiras)."""
     counts = Counter(r['category'] for r in records)
-    w = np.array([1 / counts[r['category']] ** .5 for r in records], dtype=np.float64)
+    src_weight = src_weight or {}
+    w = np.array([src_weight.get(r['src'], 1.0) / counts[r['category']] ** .5 for r in records], dtype=np.float64)
     w /= w.sum()
     if n_synthetic:
         share = n_synthetic / len(records)

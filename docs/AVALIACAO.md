@@ -1,5 +1,37 @@
 # Avaliação e limitações verificadas
 
+### Combinação v2+v3 (porta 8001, em teste desde 24/11/2026)
+
+O app passa a foto nos dois modelos. Se o v3 acha alguma **categoria nova** (Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer ou Lasanha) com a área mínima de 3%, a foto inteira usa o v3; senão, vale o v2. Assim um prato feito comum fica com o resultado do v2, e o v3 não consegue trocar batata frita por macarrão nem carne por frango. Código: `CombinedVisionService` em `app/vision.py`; ligado pela variável `PRATOMETRIA_MODEL_NOVAS`. O app ativo (porta 8000) **continua só com o v2**.
+
+Mini teste com 12 fotos reais de pratos (`docs/FOTOS_REAIS_GABARITO.json`, `scripts/avaliar_fotos_reais.py`):
+
+| | v2 | v3 | v3b | **v2+v3** |
+|---|---|---|---|---|
+| Prato feito (7 fotos): alimentos achados | 29/35 | 26/35 | 27/35 | **29/35** |
+| Prato feito: alimentos inventados | 1 | 2 | 0 | 1 |
+| Outros (5 fotos com comidas novas): achados | 1/8 | 5/8 | 4/8 | **5/8** |
+| Outros: inventados | 6 | 2 | 2 | 3 |
+| Fotos perfeitas, no total | 2/12 | 4/12 | 4/12 | **5/12** |
+
+Teste dos datasets (`docs/METRICAS_COMBINADO.json`):
+
+| Medida no teste | v2 | v3 | **v2+v3** |
+|---|---:|---:|---:|
+| Brasileiro: IoU médio da classe anotada | 0,742 | 0,702 | **0,742** |
+| Brasileiro: recall de presença | 0,935 | 0,922 | **0,935** |
+| MyFood: pratos 100% corretos | 88,3% | 86,5% | 87,4% |
+| MyFood: imagens com algum falso positivo | 8,1% | 9,5% | 9,0% |
+| Imagens sem comida com detecção espúria | 0% | 3,3% | **0%** |
+| MyFoodRepo: F1 de presença, macro | 0,115 | 0,556 | 0,427 |
+| MyFoodRepo: pratos 100% corretos | 7,5% | 34,7% | 27,2% |
+
+**Leitura:** nas fotos brasileiras é idêntico ao v2; no MyFood perde cerca de 1 ponto; no MyFoodRepo fica entre os dois (fotos suíças sem categoria nova vão para o v2, que não conhece aquela comida). **Cuidado:** a regra foi escolhida olhando as mesmas 12 fotos do mini teste, então o resultado nelas é otimista. Antes de virar o modelo do app, testar com fotos novas que ninguém usou para decidir.
+
+**v3b (descartado):** retreino do v3 sem as fotos de massa e frango do MyFoodRepo e com peso 2 nas fotos brasileiras (`--mfr-skip-classes 8,3 --brazil-weight 2` em `scripts/train_v2.py`). Corrigiu batata frita → macarrão e carne → frango, mas passou a perder o frango e inventou abóbora no "almoço leo". Não foi commitado.
+
+**Área mínima de 3%:** testada também com 2,5% e 2%. Com o v2 não acha nada a mais no mini teste e piora um pouco o MyFood (imagens com falso positivo 8,1% → 9,0% com 2,5%). Ficou em 3%.
+
 ### Modelo v3 (alternativo; foi ativo por algumas horas em 23/11/2026)
 
 Mesma arquitetura do v2 (MobileNetV3-Large + LR-ASPP, 224 × 224), com **28 saídas sigmoid**. Treino de 15 épocas com três fontes de imagens: MyFood, Brazilian Food Images e uma amostra do **MyFoodRepo v2.0** (fotos de celular de refeições reais). Categorias novas: Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer (sanduíche) e Lasanha. Época e limiares escolhidos só na validação. Relatório: `docs/METRICAS_V3.json`.

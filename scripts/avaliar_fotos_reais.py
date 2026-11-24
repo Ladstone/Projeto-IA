@@ -6,7 +6,7 @@ aplica a mesma área mínima do app. Compara com o gabarito de presença:
 - ``aceito``: itens pequenos ou ambíguos (potinho ao lado, cenoura no arroz). Achar ou não, tanto faz.
 Qualquer outra classe detectada conta como alimento inventado (falso positivo).
 
-Uso:
+Uso (um modelo, ou a combinação base.pt+novas.pt):
   python scripts/avaliar_fotos_reais.py --dir "C:/Users/.../Downloads" \
       --model v2=models/unified_21class_v2.pt --model v3=models/unified_28class_v3.pt
 """
@@ -19,7 +19,7 @@ from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from app.vision import VisionService, MIN_REGION_FRACTION, food_crop_box  # noqa: E402
+from app.vision import load_vision, MIN_REGION_FRACTION, food_crop_box  # noqa: E402
 from app.unified_classes import FOOD_CLASS_MAP  # noqa: E402
 
 NAME_TO_ID = {v['nome']: k for k, v in FOOD_CLASS_MAP.items()}
@@ -53,7 +53,7 @@ def main():
     result = {}
     for spec in a.model:
         name, path = spec.split('=', 1)
-        service = VisionService(ROOT / path)
+        service = load_vision(path, ROOT)
         n_class = service.n_class
         rows = []
         print(f'\n== {name} ({path}, {n_class} classes)')

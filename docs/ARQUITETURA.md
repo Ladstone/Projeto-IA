@@ -10,7 +10,8 @@ Recorte no prato (sugerido por POST /api/crop-suggestion, editável; opcional)
 POST /api/analyze (FastAPI)
        |
        v
-VisionService.predict -> pesos PyTorch unified_21class.pt (v2: MobileNetV3 + LR-ASPP, 21 classes; v3 de 28 classes opcional)
+VisionService.predict -> pesos PyTorch unified_21class.pt (v2: MobileNetV3 + LR-ASPP, 21 classes; v3 de 28 classes opcional;
+                         CombinedVisionService v2+v3 com PRATOMETRIA_MODEL_NOVAS, em teste)
        |
        +--> Máscaras e diagnóstico por classe (hipóteses)
        |
