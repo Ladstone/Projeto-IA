@@ -1,0 +1,17 @@
+{
+  "descricao": "Mini teste com fotos reais de pratos (fora dos datasets), anotado à mão pela presença de cada alimento. 'tem' = deve ser achado; 'aceito' = item pequeno ou ambíguo, não conta acerto nem erro. 'grupo': 'prato feito' (arroz, feijão e mistura, o caso principal do app) ou 'outros' (pratos com as comidas novas do v3). As fotos não estão no repositório; use scripts/avaliar_fotos_reais.py --dir com a pasta onde estão.",
+  "fotos": [
+    {"arquivo": "prato feito 2.jfif", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Frango", "Batata frita"], "aceito": ["Farofa", "Tomate", "Cebola", "Salada"], "obs": "vinagrete e farofa em potinhos ao lado"},
+    {"arquivo": "prato feito 3.jfif", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Frango", "Salada", "Tomate"], "aceito": []},
+    {"arquivo": "prato feito 4.webp", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Carne bovina", "Farofa", "Salada", "Tomate"], "aceito": ["Cebola", "Repolho"], "obs": "a folha é couve picada"},
+    {"arquivo": "prato feito 6.jpg", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Carne bovina", "Batata frita", "Salada", "Tomate"], "aceito": []},
+    {"arquivo": "prato feito 7.webp", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Ovo", "Carne bovina", "Salada"], "aceito": []},
+    {"arquivo": "prato feito daniel.jfif", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Frango", "Batata cozida"], "aceito": ["Farofa", "Mandioca", "Abóbora"], "obs": "batata inteira no molho do frango"},
+    {"arquivo": "almoço ladstone 2026-11-23.jpeg", "grupo": "prato feito", "tem": ["Arroz", "Feijão", "Carne bovina", "Salada", "Farofa"], "aceito": ["Tomate", "Cenoura", "Milho"]},
+    {"arquivo": "almoço leo.jfif", "grupo": "outros", "tem": ["Brócolis", "Frango"], "aceito": []},
+    {"arquivo": "hamburguer duarte.jfif", "grupo": "outros", "tem": ["Hambúrguer (sanduíche)", "Batata frita"], "aceito": ["Salada", "Pão", "Carne bovina"], "obs": "print de story; batata-doce frita"},
+    {"arquivo": "lasanha.jpg", "grupo": "outros", "tem": ["Lasanha"], "aceito": ["Massa com molho vermelho"]},
+    {"arquivo": "lasanha.jfif", "grupo": "outros", "tem": ["Lasanha", "Salada"], "aceito": ["Tomate", "Massa com molho vermelho"]},
+    {"arquivo": "lasanha de duarte.jfif", "grupo": "outros", "tem": ["Massa com molho vermelho"], "aceito": ["Macarrão", "Lasanha"], "obs": "na verdade é ravióli com molho"}
+  ]
+}
