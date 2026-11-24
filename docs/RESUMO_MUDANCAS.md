@@ -82,6 +82,7 @@ O v1 errava de um jeito sistemático:
 - **7 categorias novas (22 a 28), todas ligadas à TACO:** Brócolis (#100), Batata cozida (#91), Peixe (#301, merluza assada como aproximação), Pão (#53), Cebola (#107), Hambúrguer (sanduíche) e Lasanha. As duas últimas entram como **receita**: sanduíche = pão 40% + hambúrguer grelhado 60%; lasanha = massa 40% + carne moída 25% + molho de tomate 20% + muçarela 15%.
 - **Reforço das antigas:** o MyFoodRepo também traz fotos de arroz, frango, salada, milho, purê etc.
 - **Escolhas de classe:** coxa de frango (só 85 fotos) entrou em Frango; a carne de hambúrguer solta entrou em Carne bovina.
+- **Volta ao v2 (23/11/2026):** testado em fotos reais de prato feito, o v3 confundiu batata frita com macarrão e bife com frango, erros que o v2 não comete. O app voltou ao v2; o v3 fica em `models/unified_28class_v3.pt` para demonstração (`PRATOMETRIA_MODEL`, porta 8001). Antes de trocar de novo, testar também em fotos reais.
 - **App:** aceita modelos de 21 ou 28 classes (lê `classes` do `.json`) e ganhou a variável `PRATOMETRIA_MODEL` para testar outro modelo sem trocar o ativo.
 - **Treino:** 15 épocas, cerca de 12 min cada em CPU (~3 h). Interrompido uma vez por falta de RAM e retomado do checkpoint. Melhor época: 15.
 

@@ -2,16 +2,15 @@
 
 Protótipo executável de **interface + módulo de inteligência artificial + módulo de resposta**, pensado para entrega universitária e continuação por uma equipe. Não usa serviços externos ou chave de API.
 
-> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v3**, treinado por 15 épocas com **três datasets de imagens** e **28 categorias**. Ele reconhece 7 comidas que o v2 não via (brócolis, batata cozida, peixe, pão, cebola, hambúrguer e lasanha) e acerta bem mais em fotos variadas de celular, mas **a identificação continua experimental**:
-> - **Cebola, peixe, abóbora e milho são as classes mais fracas** (F1 ou IoU abaixo de 0,35 no teste).
-> - No teste dos dois datasets antigos, o v3 ficou um pouco abaixo do v2 (pratos 100% corretos: 86,5% x 88,3%).
-> - **Não há avaliação com fotos reais de usuários.** Todas as métricas usam fotos dos próprios datasets.
+> **Estado honesto:** o frontend e o backend funcionam. O app usa o modelo **v2** (21 categorias, dois datasets de imagens). Existe também um **v3** experimental com **28 categorias** e um terceiro dataset (MyFoodRepo), que reconhece brócolis, batata cozida, peixe, pão, cebola, hambúrguer e lasanha, mas **não é o ativo**: Em fotos reais de prato feito tiradas pela equipe, o v3 confundiu **batata frita com macarrão** (`prato feito 2`) e **bife com frango** (almoço de 23/11), erros que o v2 não comete. **A identificação continua experimental:**
+> - **Milho é a classe mais fraca** do v2 (IoU de 0,44 no teste).
+> - As métricas usam fotos dos próprios datasets; os testes com fotos reais ainda são poucos e informais.
 >
 > O projeto não deve ser apresentado como aplicativo nutricional preciso ou finalizado.
 
 ## O que já funciona
 
-1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 28 categorias visuais. O modelo ativo é o v3 (MobileNetV3 + LR-ASPP, 15 épocas); o v2, o v2 piloto e o v1 (U-Net) ficam como backup.
+1. Enviar uma foto de refeição e executar **segmentação local** com uma rede PyTorch de 21 categorias visuais. O modelo ativo é o v2 (MobileNetV3 + LR-ASPP, 20 épocas); o v3 de 28 categorias, o v2 piloto e o v1 (U-Net) ficam como alternativas.
 2. Ver regiões sugeridas, editar/retirar alimentos e acrescentar qualquer um dos **597 registros da TACO**.
 3. Informar os gramas da porção (a foto **não mede peso**), consultar os **26 campos da Tabela 1 da TACO** e recalcular os totais.
 4. Configurar metas pessoais de kcal/proteína/carboidratos/lipídios, comparar a refeição com essas metas e obter sugestões baseadas em regras.
@@ -89,16 +88,18 @@ Endpoints principais: `GET /api/health`, `GET /api/model/info`, `POST /api/crop-
 
 ## Próximas etapas
 
-Situação em 23/11/2026. O app usa o **v3** (`models/unified_21class.pt`, cópia de `models/unified_28class_v3.pt`; o nome do arquivo ficou o mesmo para não mudar o app, e o `.json` informa as 28 classes). Ficam como backup o **v2** de 21 classes (`models/unified_21class_v2.(pt|json)`), o **v2 piloto** e o **v1**. Para voltar a um deles, copie os dois arquivos para `models/unified_21class.*`; o app aceita modelos de 21 ou 28 classes.
+Situação em 23/11/2026. O app usa o **v2** (`models/unified_21class.pt`, cópia de `models/unified_21class_v2.pt`). O **v3** de 28 classes (`models/unified_28class_v3.(pt|json)`) foi ativo por algumas horas e voltou a ser alternativo: Em fotos reais de prato feito tiradas pela equipe, o v3 confundiu **batata frita com macarrão** (`prato feito 2`) e **bife com frango** (almoço de 23/11), erros que o v2 não comete. Ficam também o **v2 piloto** e o **v1**. Para voltar a um deles, copie os dois arquivos para `models/unified_21class.*`; o app aceita modelos de 21 ou 28 classes.
 
 Para testar outro modelo sem trocar o ativo, use a variável `PRATOMETRIA_MODEL`:
 
 ```powershell
-$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
+$env:PRATOMETRIA_MODEL = "models/unified_28class_v3.pt"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
-### Modelo v3
+Assim dá para mostrar o v2 em `http://127.0.0.1:8000` e o v3 em `http://127.0.0.1:8001` ao mesmo tempo.
+
+### Modelo v3 (alternativo)
 
 Mesma rede do v2 (MobileNetV3-Large pré-treinada no ImageNet + LR-ASPP, 224 px, supervisão negativa por pixel e imagens sem comida), agora com 28 saídas. Categorias novas: **Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer (sanduíche) e Lasanha**; as duas últimas entram na TACO como receita (vários ingredientes). Coxa de frango do MyFoodRepo foi somada a Frango. Treino de 15 épocas em CPU (~3 h, 12 min por época); a melhor época foi a 15 (F1 de presença 0,69 na validação, que agora inclui as fotos difíceis do MyFoodRepo). Época e limiares foram escolhidos **só na validação**.
 
@@ -119,6 +120,7 @@ F1 das categorias novas no teste do MyFoodRepo: Pão 0,80; Hambúrguer 0,79; Las
 
 ### Limitações conhecidas do v3
 
+- **Regressões em fotos reais de prato feito:** batata frita vista como Macarrão e bife como Frango. O MyFoodRepo tem muita massa e frango assado, e o modelo puxou para essas classes. Por isso o v3 não é o ativo.
 - **Classes fracas:** Cebola (F1 0,17) e Peixe (0,33) entre as novas; Abóbora (0,18 no MyFoodRepo) e Milho (IoU 0,26 no brasileiro, era 0,44 no v2) entre as antigas.
 - **Pequena perda nos testes antigos:** no brasileiro, os pixels na classe certa caíram de 82% para 77%; Purê, Arroz e Salada foram as que mais perderam.
 - **Detecção espúria em imagens sem comida:** 3,3% das imagens sintéticas (o v2 tinha 0%).

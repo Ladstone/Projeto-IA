@@ -4,7 +4,7 @@
 
 Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo de resposta**, apresentação do funcionamento e link para o repositório GitHub.
 
-**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede prevê 28 categorias; a TACO fornece informações de 597 registros após seleção do preparo.
+**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede ativa (v2) prevê 21 categorias (o v3 alternativo, 28); a TACO fornece informações de 597 registros após seleção do preparo.
 
 ## Primeiro acesso
 

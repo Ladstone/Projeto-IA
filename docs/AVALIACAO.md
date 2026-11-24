@@ -1,6 +1,6 @@
 # Avaliação e limitações verificadas
 
-### Modelo incluído (v3, ativo desde 23/11/2026)
+### Modelo v3 (alternativo; foi ativo por algumas horas em 23/11/2026)
 
 Mesma arquitetura do v2 (MobileNetV3-Large + LR-ASPP, 224 × 224), com **28 saídas sigmoid**. Treino de 15 épocas com três fontes de imagens: MyFood, Brazilian Food Images e uma amostra do **MyFoodRepo v2.0** (fotos de celular de refeições reais). Categorias novas: Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer (sanduíche) e Lasanha. Época e limiares escolhidos só na validação. Relatório: `docs/METRICAS_V3.json`.
 
