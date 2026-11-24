@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
 from .vision import VisionService, CombinedVisionService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
-from .unified_classes import RECIPES, VARIANTES
+from .unified_classes import RECIPES, VARIANTES, NOMES_EXIBIDOS
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
@@ -296,7 +296,8 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
                             'A TACO não tem este preparo pronto; ajuste ou remova cada ingrediente. '
                             'Porção estimada pela área no prato; informe o peso real.')})
             continue
-        taco_id,extra=record['taco_id'],{}
+        taco_id=record['taco_id']
+        extra={'nome_exibido':NOMES_EXIBIDOS[class_id]} if class_id in NOMES_EXIBIDOS else {}
         if class_id in VARIANTES:
             v=VARIANTES[class_id]
             taco_id=v['escuro'] if dark_fraction(image,mask,class_id)>=DARK_SHARE else v['claro']

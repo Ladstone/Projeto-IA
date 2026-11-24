@@ -44,3 +44,11 @@ def test_bean_note_does_not_mention_type(monkeypatch):
     note = _feijao(monkeypatch, (150, 110, 80))['note'].lower()
     assert 'preto' not in note and 'carioca' not in note and 'tipo' not in note
     assert not note.startswith('.')
+
+
+def test_arroz_frango_e_carne_aparecem_com_nome_curto_e_sem_obs():
+    from app.unified_classes import NOMES_EXIBIDOS, FOOD_CLASS_MAP
+    for class_id, nome, taco_id in [(1, 'Arroz', 3), (3, 'Frango', 410), (4, 'Carne bovina', 377)]:
+        assert NOMES_EXIBIDOS[class_id] == nome
+        assert FOOD_CLASS_MAP[class_id]['taco_id'] == taco_id  # mesma linha da TACO de antes
+        assert FOOD_CLASS_MAP[class_id]['note'] == ''
