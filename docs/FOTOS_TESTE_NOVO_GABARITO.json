@@ -1,0 +1,26 @@
+{
+  "descricao": "Teste independente com 21 fotos tiradas do Pinterest em 25/11/2026 (12 de prato feito e 9 de pratos com purê), anotado pela presença de cada alimento ('tem' = deve ser achado; 'aceito' = item pequeno, ambíguo ou sem categoria própria, não conta acerto nem erro). REGRA: este conjunto NÃO pode ser usado para ajustar modelo, limiares ou regras; serve só para medir. As fotos não estão no repositório. Uso: scripts/avaliar_fotos_reais.py --gabarito docs/FOTOS_TESTE_NOVO_GABARITO.json --dir <pasta das fotos>.",
+  "fotos": [
+    {"arquivo": "printrest 1.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Ovo", "Tomate", "Salada" ], "aceito": [ "Cebola" ], "obs": "bife acebolado; arroz quase todo coberto"},
+    {"arquivo": "printrest 2.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Tomate", "Salada" ], "aceito": []},
+    {"arquivo": "printrest 3.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Farofa" ], "aceito": [ "Tomate", "Cebola", "Carne bovina" ], "obs": "feijão preto com linguiça (sem categoria); vinagrete"},
+    {"arquivo": "printrest 4.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Farofa", "Salada" ], "aceito": [ "Tomate", "Cenoura", "Cebola" ], "obs": "pepino e cenoura ralada por cima da salada"},
+    {"arquivo": "printrest 5.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Farofa" ], "aceito": []},
+    {"arquivo": "printrest 6.jpg", "grupo": "prato feito", "tem": [ "Arroz" ], "aceito": [ "Frango", "Carne bovina", "Batata frita" ], "obs": "estrogonofe (sem categoria; frango ou carne) com batata palha"},
+    {"arquivo": "printrest 7.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Farofa" ], "aceito": [ "Salada", "Repolho", "Tomate", "Frango" ], "obs": "carne seca, torresmo e couve refogada; vinagrete em panela ao fundo"},
+    {"arquivo": "printrest 8.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Ovo", "Tomate" ], "aceito": [ "Salada", "Cebola" ], "obs": "pepino em rodelas"},
+    {"arquivo": "printrest 9.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Carne bovina", "Salada", "Abóbora" ], "aceito": [ "Tomate", "Cebola", "Cenoura", "Feijão" ], "obs": "arroz com cenoura; carne de panela com legumes"},
+    {"arquivo": "printrest 10.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Carne bovina", "Salada" ], "aceito": [ "Tomate", "Farofa", "Abóbora", "Cenoura", "Milho", "Cebola" ], "obs": "arroz temperado amarelo; acompanhamento amarelo não identificado"},
+    {"arquivo": "printrest 11.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Carne bovina", "Batata frita", "Ovo", "Tomate" ], "aceito": [ "Salada" ], "obs": "fundo preto, foto de cardápio"},
+    {"arquivo": "printrest 12.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Farofa", "Tomate" ], "aceito": [ "Cebola", "Salada" ], "obs": "feijão tropeiro; linguiça ao lado da carne; vinagrete"},
+    {"arquivo": "printrest 13.jpg", "grupo": "com purê", "tem": [ "Purê", "Frango", "Tomate" ], "aceito": [ "Cebola", "Salada" ], "obs": "frango grelhado em filés; salada de tomate com cebola"},
+    {"arquivo": "printrest 14.jpg", "grupo": "com purê", "tem": [ "Purê", "Arroz", "Carne bovina" ], "aceito": [ "Feijão", "Cenoura", "Milho" ], "obs": "carne moída com legumes; um pouco de feijão no canto"},
+    {"arquivo": "printrest 15.jpg", "grupo": "com purê", "tem": [ "Purê", "Arroz", "Carne bovina" ], "aceito": [], "obs": "purê bem amarelo e liso; carne de panela escura"},
+    {"arquivo": "printrest 16.jpg", "grupo": "com purê", "tem": [ "Purê", "Carne bovina", "Salada", "Tomate" ], "aceito": [ "Cenoura" ], "obs": "carne moída com cenoura; print de story"},
+    {"arquivo": "printrest 17.jpg", "grupo": "com purê", "tem": [ "Purê", "Carne bovina", "Salada", "Cenoura" ], "aceito": [], "obs": "carne moída; cenoura ralada sobre a alface"},
+    {"arquivo": "printrest 18.jpg", "grupo": "com purê", "tem": [ "Purê", "Frango", "Arroz", "Salada" ], "aceito": [ "Tomate" ], "obs": "prato na mão, fundo com plantas"},
+    {"arquivo": "printrest 19.jpg", "grupo": "com purê", "tem": [ "Purê", "Carne bovina", "Salada", "Tomate" ], "aceito": [], "obs": "bife; salada de folhas com tomate-cereja"},
+    {"arquivo": "printrest 20.jpg", "grupo": "com purê", "tem": [ "Purê", "Carne bovina", "Brócolis", "Cenoura" ], "aceito": [ "Abóbora" ], "obs": "costeletas (categoria mais próxima: carne bovina); legumes em cubos"},
+    {"arquivo": "printrest 21.jpg", "grupo": "com purê", "tem": [ "Purê", "Arroz", "Peixe" ], "aceito": [ "Brócolis", "Frango" ], "obs": "arroz com brócolis; purê liso espalhado"}
+  ]
+}

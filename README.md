@@ -64,12 +64,13 @@ Resultados resumidos (detalhes em [docs/RESULTADOS.md](docs/RESULTADOS.md)):
 | MyFood: pratos 100% corretos no teste | 6% | 88% | — |
 | Fotos reais da equipe, pratos fora do comum: alimentos achados | — | 1/8 | 5/8 |
 | Fotos de purê em que o purê foi achado | — | 1% | 90% |
+| Teste independente (21 fotos novas): alimentos achados | — | 70% | 80% |
 
 ## Limitações
 
 - **A identificação erra.** As categorias mais fracas são milho, cebola e peixe. O app sempre deixa a pessoa corrigir.
 - **A foto não mede peso**, óleo, molho nem modo de preparo.
-- **Faltam testes com fotos novas.** O teste com fotos reais tem 12 fotos e foi usado para ajustar as regras, então é otimista.
+- **Os testes com fotos reais são pequenos.** O teste independente tem 21 fotos, de Pinterest; fotos de celular no dia a dia tendem a ser mais difíceis.
 - **Não é orientação nutricional.** As metas e os feedbacks são estimativas educacionais e não substituem um nutricionista.
 - **Um usuário só.** O histórico e as metas ficam num banco local (SQLite), sem login.
 

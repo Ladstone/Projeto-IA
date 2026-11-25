@@ -49,9 +49,27 @@ O v2 chamava purê de arroz ou frango. Teste com 196 fotos de purê que ficaram 
 
 **Leitura:** o purê passou de quase nunca achado para 90%, ao custo de 5 fotos a mais com purê inventado em 366.
 
+## 4. Teste independente: 21 fotos novas
+
+Fotos do Pinterest reunidas em 25/11/2026, **depois** de todas as decisões sobre o modelo: 12 de prato feito e 9 de pratos com purê. Nenhuma foi usada para ajustar modelo, limiar ou regra (`docs/FOTOS_TESTE_NOVO_GABARITO.json`, resultado completo em `docs/METRICAS_TESTE_NOVO.json`).
+
+| Medida | v2 | **Combinação (padrão)** |
+|---|---:|---:|
+| Todas (21 fotos): alimentos achados | 61/87 (70%) | **70/87 (80%)** |
+| Todas: alimentos inventados | 11 | **6** |
+| Prato feito (12 fotos): alimentos achados | 45/55 | 45/55 |
+| Com purê (9 fotos): purê achado | 0 de 9 | **9 de 9** |
+| Com purê: alimentos achados | 16/32 (50%) | **25/32 (78%)** |
+| Com purê: alimentos inventados | 8 | **3** |
+
+**Leitura:** no prato feito comum a combinação é igual ao v2; com purê ela acha o purê em todas as fotos e para de inventar arroz no lugar dele. O acerto de 80% fica perto dos 79% do mini teste (34/43), então o mini teste era só um pouco otimista.
+
+**Erros que se repetem na combinação:** tomate em rodelas, picado ou no vinagrete (6 fotos), batata frita (2), arroz parcialmente coberto (4), brócolis e cenoura em cubos.
+
 ## Como ler estes números
 
-- **O mini teste é pequeno e foi usado para decidir** as regras da combinação, então os números dele são otimistas. Falta um teste com fotos novas que ninguém usou para decidir.
+- **O mini teste (tabela 2) foi usado para decidir** as regras da combinação, então é um pouco otimista. O teste independente (tabela 4) não foi usado para decidir nada, mas tem só 21 fotos, de Pinterest: bem iluminadas e vistas de cima. O gabarito das duas listas foi feito à mão, pela presença de cada alimento.
+- **A regra dos 10% é instável perto do limite.** Na foto 21 do teste novo, o peixe visto pelo v3 vai de 8,9% a 10,3% conforme 1 pixel do recorte e a compressão JPEG, e isso decide se o peixe aparece. O script de teste recorta exatamente como a página (`recorte_como_no_app`).
 - **Os testes dos datasets usam fotos das mesmas fontes do treino.** Não garantem o desempenho em qualquer foto de celular.
 - **A tabela 1 não inclui a combinação.** Ela foi medida nos datasets só na primeira versão (`METRICAS_COMBINADO.json`: igual ao v2 nas fotos brasileiras), antes da regra dos 10% e do purê; a medida não foi refeita.
 - **A foto não mede peso.** As gramas são uma estimativa pela área no prato, e o usuário deve corrigir.

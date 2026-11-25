@@ -1,0 +1,1117 @@
+{
+  "combinacao": {
+    "modelo": "models/unified_21class_v2.pt+models/unified_28class_v3.pt|models/unified_28class_v3d.pt",
+    "resumo": {
+      "prato feito": {
+        "alimentos_achados": "45/55",
+        "recall": 0.818,
+        "alimentos_inventados": 3,
+        "fotos_perfeitas": "3/12"
+      },
+      "com purê": {
+        "alimentos_achados": "25/32",
+        "recall": 0.781,
+        "alimentos_inventados": 3,
+        "fotos_perfeitas": "1/9"
+      },
+      "todas": {
+        "alimentos_achados": "70/87",
+        "recall": 0.805,
+        "alimentos_inventados": 6,
+        "fotos_perfeitas": "4/21"
+      }
+    },
+    "fotos": [
+      {
+        "arquivo": "printrest 1.jpg",
+        "grupo": "prato feito",
+        "n_tem": 7,
+        "n_achou": 5,
+        "detectado": [
+          "Batata frita",
+          "Carne bovina",
+          "Feijão",
+          "Salada",
+          "Tomate"
+        ],
+        "faltou": [
+          "Arroz",
+          "Ovo"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 2.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Batata frita",
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 3.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Farofa",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Salada"
+        ]
+      },
+      {
+        "arquivo": "printrest 4.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 4,
+        "detectado": [
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz",
+          "Batata frita"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 5.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Farofa",
+          "Feijão"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 6.jpg",
+        "grupo": "prato feito",
+        "n_tem": 1,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Feijão",
+          "Ovo"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Feijão",
+          "Ovo"
+        ]
+      },
+      {
+        "arquivo": "printrest 7.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Frango",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 8.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Feijão",
+          "Ovo",
+          "Salada"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 9.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Salada"
+        ],
+        "faltou": [
+          "Abóbora"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 10.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Farofa",
+          "Salada"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 11.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Ovo",
+          "Tomate"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 12.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Farofa",
+          "Feijão"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 13.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 2,
+        "detectado": [
+          "Frango",
+          "Purê"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 14.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Frango",
+          "Purê"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Frango"
+        ]
+      },
+      {
+        "arquivo": "printrest 15.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão",
+          "Purê"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Feijão"
+        ]
+      },
+      {
+        "arquivo": "printrest 16.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 17.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Cenoura"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 18.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Frango",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 19.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 20.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 2,
+        "detectado": [
+          "Carne bovina",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Brócolis",
+          "Cenoura"
+        ],
+        "inventou": [
+          "Salada"
+        ]
+      },
+      {
+        "arquivo": "printrest 21.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Frango",
+          "Peixe",
+          "Purê"
+        ],
+        "faltou": [],
+        "inventou": []
+      }
+    ]
+  },
+  "v2": {
+    "modelo": "models/unified_21class_v2.pt",
+    "resumo": {
+      "prato feito": {
+        "alimentos_achados": "45/55",
+        "recall": 0.818,
+        "alimentos_inventados": 3,
+        "fotos_perfeitas": "3/12"
+      },
+      "com purê": {
+        "alimentos_achados": "16/32",
+        "recall": 0.5,
+        "alimentos_inventados": 8,
+        "fotos_perfeitas": "0/9"
+      },
+      "todas": {
+        "alimentos_achados": "61/87",
+        "recall": 0.701,
+        "alimentos_inventados": 11,
+        "fotos_perfeitas": "3/21"
+      }
+    },
+    "fotos": [
+      {
+        "arquivo": "printrest 1.jpg",
+        "grupo": "prato feito",
+        "n_tem": 7,
+        "n_achou": 5,
+        "detectado": [
+          "Batata frita",
+          "Carne bovina",
+          "Feijão",
+          "Salada",
+          "Tomate"
+        ],
+        "faltou": [
+          "Arroz",
+          "Ovo"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 2.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Batata frita",
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 3.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Farofa",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Salada"
+        ]
+      },
+      {
+        "arquivo": "printrest 4.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 4,
+        "detectado": [
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz",
+          "Batata frita"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 5.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Farofa",
+          "Feijão"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 6.jpg",
+        "grupo": "prato feito",
+        "n_tem": 1,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Feijão",
+          "Ovo"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Feijão",
+          "Ovo"
+        ]
+      },
+      {
+        "arquivo": "printrest 7.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Frango",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 8.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Feijão",
+          "Ovo",
+          "Salada"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 9.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Salada"
+        ],
+        "faltou": [
+          "Abóbora"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 10.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Farofa",
+          "Salada"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 11.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Ovo",
+          "Tomate"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 12.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Farofa",
+          "Feijão"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 13.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Frango"
+        ],
+        "faltou": [
+          "Purê",
+          "Tomate"
+        ],
+        "inventou": [
+          "Arroz"
+        ]
+      },
+      {
+        "arquivo": "printrest 14.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 2,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Frango"
+        ],
+        "faltou": [
+          "Purê"
+        ],
+        "inventou": [
+          "Frango"
+        ]
+      },
+      {
+        "arquivo": "printrest 15.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 2,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão"
+        ],
+        "faltou": [
+          "Purê"
+        ],
+        "inventou": [
+          "Feijão"
+        ]
+      },
+      {
+        "arquivo": "printrest 16.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 2,
+        "detectado": [
+          "Carne bovina",
+          "Ovo",
+          "Salada"
+        ],
+        "faltou": [
+          "Purê",
+          "Tomate"
+        ],
+        "inventou": [
+          "Ovo"
+        ]
+      },
+      {
+        "arquivo": "printrest 17.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 2,
+        "detectado": [
+          "Carne bovina",
+          "Farofa",
+          "Salada"
+        ],
+        "faltou": [
+          "Cenoura",
+          "Purê"
+        ],
+        "inventou": [
+          "Farofa"
+        ]
+      },
+      {
+        "arquivo": "printrest 18.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Frango",
+          "Salada"
+        ],
+        "faltou": [
+          "Purê"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 19.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 2,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Salada"
+        ],
+        "faltou": [
+          "Purê",
+          "Tomate"
+        ],
+        "inventou": [
+          "Arroz"
+        ]
+      },
+      {
+        "arquivo": "printrest 20.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Salada"
+        ],
+        "faltou": [
+          "Brócolis",
+          "Cenoura",
+          "Purê"
+        ],
+        "inventou": [
+          "Arroz",
+          "Salada"
+        ]
+      },
+      {
+        "arquivo": "printrest 21.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Frango"
+        ],
+        "faltou": [
+          "Peixe",
+          "Purê"
+        ],
+        "inventou": []
+      }
+    ]
+  },
+  "v3d": {
+    "modelo": "models/unified_28class_v3d.pt",
+    "resumo": {
+      "prato feito": {
+        "alimentos_achados": "39/55",
+        "recall": 0.709,
+        "alimentos_inventados": 9,
+        "fotos_perfeitas": "1/12"
+      },
+      "com purê": {
+        "alimentos_achados": "22/32",
+        "recall": 0.688,
+        "alimentos_inventados": 5,
+        "fotos_perfeitas": "2/9"
+      },
+      "todas": {
+        "alimentos_achados": "61/87",
+        "recall": 0.701,
+        "alimentos_inventados": 14,
+        "fotos_perfeitas": "3/21"
+      }
+    },
+    "fotos": [
+      {
+        "arquivo": "printrest 1.jpg",
+        "grupo": "prato feito",
+        "n_tem": 7,
+        "n_achou": 4,
+        "detectado": [
+          "Batata frita",
+          "Brócolis",
+          "Carne bovina",
+          "Feijão",
+          "Tomate"
+        ],
+        "faltou": [
+          "Arroz",
+          "Ovo",
+          "Salada"
+        ],
+        "inventou": [
+          "Brócolis"
+        ]
+      },
+      {
+        "arquivo": "printrest 2.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Batata frita",
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 3.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 2,
+        "detectado": [
+          "Arroz",
+          "Brócolis",
+          "Cebola",
+          "Cenoura",
+          "Farofa"
+        ],
+        "faltou": [
+          "Feijão"
+        ],
+        "inventou": [
+          "Brócolis",
+          "Cenoura"
+        ]
+      },
+      {
+        "arquivo": "printrest 4.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 5,
+        "detectado": [
+          "Batata frita",
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 5.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 4,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Feijão"
+        ],
+        "faltou": [
+          "Farofa"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 6.jpg",
+        "grupo": "prato feito",
+        "n_tem": 1,
+        "n_achou": 1,
+        "detectado": [
+          "Arroz",
+          "Ovo",
+          "Pão"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Ovo",
+          "Pão"
+        ]
+      },
+      {
+        "arquivo": "printrest 7.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Brócolis",
+          "Carne bovina",
+          "Farofa",
+          "Feijão",
+          "Frango"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": [
+          "Brócolis"
+        ]
+      },
+      {
+        "arquivo": "printrest 8.jpg",
+        "grupo": "prato feito",
+        "n_tem": 6,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Feijão",
+          "Ovo"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 9.jpg",
+        "grupo": "prato feito",
+        "n_tem": 4,
+        "n_achou": 1,
+        "detectado": [
+          "Cebola",
+          "Cenoura",
+          "Peixe",
+          "Salada"
+        ],
+        "faltou": [
+          "Abóbora",
+          "Arroz",
+          "Carne bovina"
+        ],
+        "inventou": [
+          "Peixe"
+        ]
+      },
+      {
+        "arquivo": "printrest 10.jpg",
+        "grupo": "prato feito",
+        "n_tem": 3,
+        "n_achou": 2,
+        "detectado": [
+          "Brócolis",
+          "Carne bovina",
+          "Cenoura",
+          "Farofa",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": [
+          "Brócolis"
+        ]
+      },
+      {
+        "arquivo": "printrest 11.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 5,
+        "detectado": [
+          "Arroz",
+          "Batata frita",
+          "Carne bovina",
+          "Ovo",
+          "Tomate"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 12.jpg",
+        "grupo": "prato feito",
+        "n_tem": 5,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Cenoura",
+          "Farofa"
+        ],
+        "faltou": [
+          "Feijão",
+          "Tomate"
+        ],
+        "inventou": [
+          "Cenoura"
+        ]
+      },
+      {
+        "arquivo": "printrest 13.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 1,
+        "detectado": [
+          "Cenoura",
+          "Peixe",
+          "Purê"
+        ],
+        "faltou": [
+          "Frango",
+          "Tomate"
+        ],
+        "inventou": [
+          "Cenoura",
+          "Peixe"
+        ]
+      },
+      {
+        "arquivo": "printrest 14.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Feijão",
+          "Purê"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 15.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Carne bovina",
+          "Purê"
+        ],
+        "faltou": [],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 16.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 1,
+        "detectado": [
+          "Brócolis",
+          "Purê"
+        ],
+        "faltou": [
+          "Carne bovina",
+          "Salada",
+          "Tomate"
+        ],
+        "inventou": [
+          "Brócolis"
+        ]
+      },
+      {
+        "arquivo": "printrest 17.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 2,
+        "detectado": [
+          "Cenoura",
+          "Purê"
+        ],
+        "faltou": [
+          "Carne bovina",
+          "Salada"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 18.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Frango",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Arroz"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 19.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Brócolis",
+          "Carne bovina",
+          "Purê",
+          "Salada"
+        ],
+        "faltou": [
+          "Tomate"
+        ],
+        "inventou": [
+          "Brócolis"
+        ]
+      },
+      {
+        "arquivo": "printrest 20.jpg",
+        "grupo": "com purê",
+        "n_tem": 4,
+        "n_achou": 3,
+        "detectado": [
+          "Carne bovina",
+          "Cenoura",
+          "Purê"
+        ],
+        "faltou": [
+          "Brócolis"
+        ],
+        "inventou": []
+      },
+      {
+        "arquivo": "printrest 21.jpg",
+        "grupo": "com purê",
+        "n_tem": 3,
+        "n_achou": 3,
+        "detectado": [
+          "Arroz",
+          "Peixe",
+          "Purê",
+          "Pão"
+        ],
+        "faltou": [],
+        "inventou": [
+          "Pão"
+        ]
+      }
+    ]
+  }
+}
