@@ -1,5 +1,5 @@
 """Histórico de pratos: o app grava cada prato analisado e o calendário lê por mês."""
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -38,7 +38,7 @@ def test_prato_analisado_entra_no_historico_com_foto(client):
     res = analisar(client, salvar=1)
     assert res['meal_id'] and res['detected']
     hist = client.get('/api/meals').json()
-    assert hist['mes'] == date.today().strftime('%Y-%m') and hist['resumo'] == {'dias': 1, 'pratos': 1, 'sequencia': 1}
+    assert hist['mes'] == date.today().strftime('%Y-%m') and hist['resumo'] == {'dias': 1, 'pratos': 1}
     meal = hist['meals'][0]
     assert meal['dia'] == date.today().isoformat() and meal['totais']['kcal'] > 0
     assert len(meal['itens']) == len(res['detected'])
@@ -71,13 +71,3 @@ def test_correcao_atualiza_o_registro_e_sem_itens_some(client):
 def test_mes_invalido(client):
     assert client.get('/api/meals?mes=2026-13').status_code == 422
 
-
-def test_refeicao_pela_hora_e_dias_seguidos():
-    assert main.refeicao_por_hora(datetime(2026, 11, 25, 8, 0)) == 'Café da manhã'
-    assert main.refeicao_por_hora(datetime(2026, 11, 25, 12, 30)) == 'Almoço'
-    assert main.refeicao_por_hora(datetime(2026, 11, 25, 16, 0)) == 'Lanche'
-    assert main.refeicao_por_hora(datetime(2026, 11, 25, 20, 0)) == 'Jantar'
-    dias = {'2026-11-22', '2026-11-23', '2026-11-24', '2026-11-20'}
-    assert main.dias_seguidos(dias, date(2026, 11, 24)) == 3
-    assert main.dias_seguidos(dias, date(2026, 11, 25)) == 3   # hoje ainda sem registro: conta até ontem
-    assert main.dias_seguidos(dias, date(2026, 11, 27)) == 0

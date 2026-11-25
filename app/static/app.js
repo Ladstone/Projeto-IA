@@ -236,7 +236,7 @@ async function loadHistory(mes){
 }
 function renderHistory(){
  const data=HIST.data,[y,m]=data.mes.split('-').map(Number);
- $('histDias').textContent=data.resumo.dias;$('histPratos').textContent=data.resumo.pratos;$('histSeq').textContent=data.resumo.sequencia;
+ $('histDias').textContent=data.resumo.dias;$('histPratos').textContent=data.resumo.pratos;
  $('histMonth').textContent=`${MESES[m-1][0].toUpperCase()+MESES[m-1].slice(1)} ${y}`;
  $('histNext').disabled=data.mes>=data.hoje.slice(0,7);
  const porDia={};data.meals.forEach(ml=>{(porDia[ml.dia]=porDia[ml.dia]||[]).push(ml);});
@@ -275,12 +275,12 @@ function renderHistoryDay(meals){
  box.append(total,bar,mac);
  meals.forEach(ml=>{
   const art=document.createElement('article');art.className='hist-meal';
-  const img=document.createElement('img');img.src=ml.foto;img.alt=`Foto do prato (${ml.refeicao.toLowerCase()})`;img.loading='lazy';
+  const img=document.createElement('img');img.src=ml.foto;img.alt=`Foto do prato das ${ml.hora}`;img.loading='lazy';
   const body=document.createElement('div');body.className='hist-meal-body';
-  const top=document.createElement('div');top.className='hist-meal-top';const t=document.createElement('strong');t.textContent=ml.refeicao;const hr=document.createElement('span');hr.textContent=ml.hora;top.append(t,hr);
+  const top=document.createElement('div');top.className='hist-meal-top';const t=document.createElement('strong');t.textContent=ml.hora;top.append(t);
   const items=document.createElement('div');items.className='hist-meal-items';items.textContent=ml.itens.map(it=>`${it.nome} ${fmt(it.grams)} g`).join(' · ');
   const foot=document.createElement('div');foot.className='hist-meal-foot';const k=document.createElement('strong');k.textContent=`${fmt(ml.totais.kcal)} kcal`;
-  const del=document.createElement('button');del.type='button';del.className='btn btn-sm hist-del';del.textContent='Apagar';del.setAttribute('aria-label',`Apagar ${ml.refeicao.toLowerCase()} das ${ml.hora}`);
+  const del=document.createElement('button');del.type='button';del.className='btn btn-sm hist-del';del.textContent='Apagar';del.setAttribute('aria-label',`Apagar prato das ${ml.hora}`);
   del.addEventListener('click',async()=>{if(!confirm('Apagar este prato do histórico?'))return;try{await api(`/api/meals/${ml.id}`,{method:'DELETE'});if(STATE.mealId===ml.id)STATE.mealId=null;await loadHistory(HIST.mes);}catch(e){showStatus('histStatus','Não foi possível apagar: '+e.message,true);}});
   foot.append(k,del);body.append(top,items,foot);art.append(img,body);box.append(art);
  });

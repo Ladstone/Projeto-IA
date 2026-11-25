@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from io import BytesIO
 import base64, json, os, sqlite3, threading
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from typing import Optional
 
 import numpy as np
@@ -184,10 +184,6 @@ def post_recalculate(body:RecalculateRequest):
 # ---- Histórico de pratos -------------------------------------------------------------
 THUMB_SIZE=256
 
-def refeicao_por_hora(quando:datetime)->str:
-    h=quando.hour+quando.minute/60
-    return 'Café da manhã' if h<10.5 else 'Almoço' if h<15 else 'Lanche' if h<18 else 'Jantar'
-
 def miniatura(image:Image.Image)->bytes:
     """Quadrado central reduzido (JPEG): é o que aparece nas bolinhas do calendário."""
     thumb=ImageOps.fit(image,(THUMB_SIZE,THUMB_SIZE),Image.Resampling.LANCZOS)
@@ -214,15 +210,8 @@ def meal_save(image:Image.Image,items:list[dict],meal_id:Optional[int]=None)->Op
             return meal_id
         agora=datetime.now()
         cur=con.execute('insert into meals (criado_em,dia,refeicao,foto,itens,totais) values (?,?,?,?,?,?)',
-                        (agora.isoformat(timespec='seconds'),agora.date().isoformat(),refeicao_por_hora(agora),foto,itens,totais))
+                        (agora.isoformat(timespec='seconds'),agora.date().isoformat(),'',foto,itens,totais))  # refeicao: não usada
         return cur.lastrowid
-
-def dias_seguidos(dias:set,hoje:date)->int:
-    """Dias seguidos com registro até hoje. Se hoje ainda não tem, conta até ontem (a sequência não zera de manhã)."""
-    d=hoje if hoje.isoformat() in dias else hoje-timedelta(days=1)
-    n=0
-    while d.isoformat() in dias:n+=1;d-=timedelta(days=1)
-    return n
 
 @app.get('/api/meals')
 def list_meals(mes:Optional[str]=None):
@@ -231,12 +220,11 @@ def list_meals(mes:Optional[str]=None):
     try:datetime.strptime(mes,'%Y-%m')
     except ValueError:raise HTTPException(422,'mes deve ser AAAA-MM')
     with lock,sqlite3.connect(DB) as con:
-        rows=con.execute("select id,criado_em,dia,refeicao,itens,totais from meals where dia like ? and itens!='[]' order by criado_em",(mes+'-%',)).fetchall()
-        todos={r[0] for r in con.execute("select distinct dia from meals where itens!='[]'")}
-    meals=[{'id':i,'criado_em':c,'dia':d,'hora':c[11:16],'refeicao':r,'itens':json.loads(it),'totais':json.loads(t),
-            'foto':f'/api/meals/{i}/foto'} for i,c,d,r,it,t in rows]
+        rows=con.execute("select id,criado_em,dia,itens,totais from meals where dia like ? and itens!='[]' order by criado_em",(mes+'-%',)).fetchall()
+    meals=[{'id':i,'criado_em':c,'dia':d,'hora':c[11:16],'itens':json.loads(it),'totais':json.loads(t),
+            'foto':f'/api/meals/{i}/foto'} for i,c,d,it,t in rows]
     return {'mes':mes,'hoje':hoje.isoformat(),'meta_kcal_dia':profile_get()['kcal'],'meals':meals,
-            'resumo':{'dias':len({m['dia'] for m in meals}),'pratos':len(meals),'sequencia':dias_seguidos(todos,hoje)}}
+            'resumo':{'dias':len({m['dia'] for m in meals}),'pratos':len(meals)}}
 
 @app.get('/api/meals/{meal_id}/foto')
 def meal_photo(meal_id:int):
