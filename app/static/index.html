@@ -6,12 +6,13 @@
 <meta name="description" content="PratoMetria — análise de refeições por visão computacional e TACO"/>
 <title>PratoMetria</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232f6b4f'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%23f6f4ef'/%3E%3C/svg%3E"/>
-<link rel="stylesheet" href="/static/styles.css?v=13"/>
+<link rel="stylesheet" href="/static/styles.css?v=14"/>
 </head>
 <body>
 <header class="site-header">
  <div class="brand">prato<span>metria</span></div>
  <nav class="header-actions" aria-label="Atalhos">
+  <button id="openHistory" class="btn btn-sm" type="button"><span aria-hidden="true">▦</span><span>Histórico</span></button>
   <button id="openGoals" class="btn btn-sm" type="button"><span aria-hidden="true">◎</span><span><span class="label-long">Minhas </span>metas</span></button>
   <button id="openTaco" class="btn btn-sm" type="button"><span aria-hidden="true">☰</span><span><span class="label-long">Tabela </span>TACO</span></button>
  </nav>
@@ -112,6 +113,25 @@
  </form>
 </dialog>
 
+<dialog id="historyDialog" class="modal history-dialog" aria-labelledby="historyTitle">
+ <div class="dialog-head"><h2 id="historyTitle">Histórico de pratos</h2><button class="btn btn-ghost btn-sm" type="button" data-close>Fechar ✕</button></div>
+ <div class="dialog-body">
+  <div class="hist-stats">
+   <div class="hist-stat"><strong id="histDias">—</strong><span>dias registrados</span></div>
+   <div class="hist-stat"><strong id="histPratos">—</strong><span>pratos no mês</span></div>
+   <div class="hist-stat accent"><strong id="histSeq">—</strong><span>dias seguidos</span></div>
+  </div>
+  <div class="hist-main">
+   <div class="hist-cal">
+    <div class="hist-nav"><button id="histPrev" class="btn" type="button" aria-label="Mês anterior">‹</button><h3 id="histMonth">—</h3><button id="histNext" class="btn" type="button" aria-label="Próximo mês">›</button></div>
+    <div id="histGrid" class="hist-grid"></div>
+   </div>
+   <div id="histDay" class="hist-day" aria-live="polite"></div>
+  </div>
+  <div id="histStatus" class="status" role="status"></div>
+ </div>
+</dialog>
+
 <dialog id="catalogDialog" class="drawer" aria-labelledby="catalogTitle">
  <div class="dialog-head"><div><h2 id="catalogTitle">Tabela TACO</h2><span id="baseCount" class="muted">597 alimentos</span></div><button class="btn btn-ghost btn-sm" type="button" data-close>Fechar ✕</button></div>
  <div class="dialog-body" id="catalogSection">
@@ -138,6 +158,6 @@
   <p class="muted"><a href="/api/taco/pdf" target="_blank" rel="noopener">Abrir a TACO original (PDF)</a> para ácidos graxos e aminoácidos.</p></div>
 </dialog>
 
-<script src="/static/app.js?v=16" defer></script>
+<script src="/static/app.js?v=17" defer></script>
 </body>
 </html>

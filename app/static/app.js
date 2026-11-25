@@ -1,5 +1,5 @@
 const $ = (id)=>document.getElementById(id);
-const STATE={file:null,crop:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[]};
+const STATE={file:null,crop:null,foods:[],taco:[],tacoMap:new Map(),classes:{},segmentation:false,catalogPage:0,lastNutrition:null,unmatched:[],mealId:null};
 function showStatus(id,message,error=false){const el=$(id);el.textContent=message;el.classList.toggle('error',error);}
 const FIELD_LABELS={kcal:'Meta energética',proteina_g:'Proteínas',carboidrato_g:'Carboidratos',lipideos_g:'Gorduras',refeicoes:'Refeições por dia',objetivo:'Objetivo',sexo:'Sexo',idade:'Idade',peso_kg:'Peso',altura_cm:'Altura',atividade:'Nível de atividade',grams:'Gramas',taco_id:'Alimento TACO'};
 // Erros 422 do FastAPI chegam como lista [{loc,msg}]: transforma em texto legível.
@@ -17,7 +17,7 @@ function fillProfile(p){$('goal').value=p.objetivo;$('sex').value=p.sexo||'';$('
 async function saveProfile(e){if(e)e.preventDefault();try{await api('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(getProfileForm())});showStatus('profileStatus','✓ Metas salvas e usadas no cálculo.');if(STATE.foods.length)await recalc();setTimeout(()=>{$('goalsDialog').close();showStatus('profileStatus','');},700);}catch(e){showStatus('profileStatus','Não foi possível salvar: '+e.message,true);}}
 // Cores das classes vêm do CSS (--class-N), as mesmas do overlay gerado no backend.
 const classColor=(id)=>getComputedStyle(document.documentElement).getPropertyValue(`--class-${id}`).trim()||'#9aa59f';
-function selectFile(file){if(!file)return;if(!file.type.startsWith('image/')){showStatus('analysisStatus','Escolha um arquivo de imagem.',true);return}if(file.size>8*1024*1024){showStatus('analysisStatus','O arquivo excede 8 MB.',true);return}STATE.file=file;STATE.crop=null;STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();const url=URL.createObjectURL(file);if($('photo').dataset.objectUrl)URL.revokeObjectURL($('photo').dataset.objectUrl);$('photo').dataset.objectUrl=url;$('photo').src=url;$('dropArea').classList.add('has-photo');$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=file.name;$('photoStatus').textContent='Foto pronta para análise';$('analyzeBtn').disabled=false;$('cropBtn').disabled=false;showStatus('analysisStatus','Ajuste o recorte e confirme para analisar.');openCrop();}
+function selectFile(file){if(!file)return;if(!file.type.startsWith('image/')){showStatus('analysisStatus','Escolha um arquivo de imagem.',true);return}if(file.size>8*1024*1024){showStatus('analysisStatus','O arquivo excede 8 MB.',true);return}STATE.file=file;STATE.crop=null;STATE.mealId=null;STATE.foods=[];STATE.unmatched=[];renderUnmatched();renderFoods();renderEmptyStats();const url=URL.createObjectURL(file);if($('photo').dataset.objectUrl)URL.revokeObjectURL($('photo').dataset.objectUrl);$('photo').dataset.objectUrl=url;$('photo').src=url;$('dropArea').classList.add('has-photo');$('dropArea').classList.remove('show-overlay');$('overlay').removeAttribute('src');$('fileName').textContent=file.name;$('photoStatus').textContent='Foto pronta para análise';$('analyzeBtn').disabled=false;$('cropBtn').disabled=false;showStatus('analysisStatus','Ajuste o recorte e confirme para analisar.');openCrop();}
 function normalize(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
 // Nome exato primeiro; senão, entre os que contêm todas as palavras, prefere o que
 // começa pela busca e depois o nome mais curto (ex.: "arroz" -> "Arroz, tipo 1, cozido").
@@ -53,7 +53,9 @@ function renderFoods(){
 }
 function renderEmptyStats(){[['Kcal','Kcal'],['Protein','Protein'],['Carbs','Carbs'],['Fats','Fats']].forEach(([stat,bar])=>{$('stat'+stat).textContent='—';$('bar'+bar).style.width='0%';$('bar'+bar).classList.remove('over');$('target'+stat).textContent='Referência da refeição: —'});$('mobileKcal').textContent='—';$('suggestions').replaceChildren();const d=document.createElement('div');d.className='reco';d.innerHTML='<div class="tiny">Próximo passo</div><h3>Envie uma foto</h3><p>Depois da análise, as sugestões comparam a refeição com as suas metas.</p>';$('suggestions').append(d);}
 function renderStats(n){const stat=[['Kcal','kcal','kcal'],['Protein','proteina_g','g'],['Carbs','carboidrato_g','g'],['Fats','lipideos_g','g']];stat.forEach(([key,field,unit])=>{const cmp=n.comparacao[field];$('stat'+key).textContent=cmp.obtido.toLocaleString('pt-BR',{maximumFractionDigits:1});$('bar'+key).style.width=Math.min(100,Math.max(0,cmp.percentual||0))+'%';$('bar'+key).classList.toggle('over',(cmp.percentual||0)>135);$('target'+key).textContent=`Referência: ${cmp.alvo_refeicao.toLocaleString('pt-BR')} ${unit} (${cmp.percentual||0}%)`;});$('mobileKcal').textContent=n.comparacao.kcal.obtido.toLocaleString('pt-BR',{maximumFractionDigits:0});const parent=$('suggestions');parent.replaceChildren();n.recomendacoes.forEach(rec=>{const box=document.createElement('div');box.className='reco';const small=document.createElement('div');small.className='tiny';small.textContent=rec.tipo;const title=document.createElement('h3');title.textContent=rec.titulo;const p=document.createElement('p');p.textContent=rec.descricao;box.append(small,title,p);parent.append(box)});}
-async function recalc(){try{const data=await api('/api/recalculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});STATE.lastNutrition=data;renderStats(data);renderFullNutrition(data);}catch(err){showStatus('analysisStatus','Erro no cálculo: '+err.message,true)}}
+async function recalc(){try{const data=await api('/api/recalculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});STATE.lastNutrition=data;renderStats(data);renderFullNutrition(data);syncMeal();}catch(err){showStatus('analysisStatus','Erro no cálculo: '+err.message,true)}}
+// Correções (alimento, gramas, remover/adicionar) atualizam o mesmo registro do histórico.
+async function syncMeal(){if(!STATE.mealId)return;try{await api(`/api/meals/${STATE.mealId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});}catch(e){if(/não encontrado/i.test(e.message))STATE.mealId=null;}}
 function renderUnmatched(){
  const el=$('unmatchedList');el.replaceChildren();
  if(!STATE.unmatched.length){el.classList.add('ai-hidden');return;}
@@ -73,9 +75,10 @@ async function analyze(){
  const btn=$('analyzeBtn');btn.disabled=true;btn.textContent='Analisando imagem...';
  showStatus('analysisStatus','A rede local está segmentando a imagem. Os resultados podem conter erros.');
  const fd=new FormData();fd.append('file',STATE.crop?STATE.crop.file:STATE.file);if(STATE.crop)fd.append('area_original',String(STATE.crop.areaOriginal));
+ fd.append('salvar','1');if(STATE.mealId)fd.append('meal_id',String(STATE.mealId));
  try{
    const res=await api('/api/analyze',{method:'POST',body:fd});
-   STATE.foods=res.detected||[];STATE.unmatched=res.unmatched||[];
+   STATE.foods=res.detected||[];STATE.unmatched=res.unmatched||[];STATE.mealId=res.meal_id??null;
    renderUnmatched();renderFoods();renderVisionDiagnostics(res.vision_debug);
    STATE.lastNutrition=res.nutrition;
    if(STATE.foods.length){renderStats(res.nutrition);renderFullNutrition(res.nutrition);}
@@ -211,3 +214,77 @@ async function calcGoals(){
  }catch(e){box.classList.add('error');box.textContent='Não foi possível calcular: '+e.message;}
 }
 $('calcGoals').addEventListener('click',calcGoals);
+
+// Histórico: calendário do mês; cada dia mostra até 3 fotos de pratos em bolinhas (+N quando tem mais).
+const HIST={mes:null,data:null,sel:null};
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS_SEMANA=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const parseDia=(iso)=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d);};
+const isoDia=(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const fmt=(v,dig=0)=>Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:dig});
+function shiftMes(mes,delta){const [y,m]=mes.split('-').map(Number);const d=new Date(y,m-1+delta,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+async function loadHistory(mes){
+ showStatus('histStatus','');
+ try{
+  const data=await api('/api/meals'+(mes?`?mes=${mes}`:''));HIST.data=data;HIST.mes=data.mes;
+  if(!HIST.sel||!HIST.sel.startsWith(data.mes)){
+   const dias=[...new Set(data.meals.map(m=>m.dia))];
+   HIST.sel=data.hoje.startsWith(data.mes)?data.hoje:(dias.length?dias[dias.length-1]:`${data.mes}-01`);
+  }
+  renderHistory();
+ }catch(e){showStatus('histStatus','Não foi possível carregar o histórico: '+e.message,true);}
+}
+function renderHistory(){
+ const data=HIST.data,[y,m]=data.mes.split('-').map(Number);
+ $('histDias').textContent=data.resumo.dias;$('histPratos').textContent=data.resumo.pratos;$('histSeq').textContent=data.resumo.sequencia;
+ $('histMonth').textContent=`${MESES[m-1][0].toUpperCase()+MESES[m-1].slice(1)} ${y}`;
+ $('histNext').disabled=data.mes>=data.hoje.slice(0,7);
+ const porDia={};data.meals.forEach(ml=>{(porDia[ml.dia]=porDia[ml.dia]||[]).push(ml);});
+ const grid=$('histGrid');grid.replaceChildren();
+ ['D','S','T','Q','Q','S','S'].forEach((w,i)=>{const s=document.createElement('span');s.className='hist-wd';s.textContent=w;s.title=DIAS_SEMANA[i];grid.append(s);});
+ const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();
+ for(let i=0;i<first;i++){const s=document.createElement('span');s.setAttribute('aria-hidden','true');grid.append(s);}
+ for(let d=1;d<=n;d++){
+  const iso=isoDia(y,m,d),meals=porDia[iso]||[],future=iso>data.hoje;
+  const b=document.createElement('button');b.type='button';b.className='hist-cell'+(meals.length?' has':'')+(iso===data.hoje?' today':'');
+  b.disabled=future;b.setAttribute('aria-pressed',String(iso===HIST.sel));
+  b.setAttribute('aria-label',`${d} de ${MESES[m-1]}, ${meals.length?meals.length+(meals.length>1?' pratos':' prato'):'sem pratos'}`);
+  const num=document.createElement('span');num.className='hist-num';num.textContent=d;b.append(num);
+  const shown=meals.slice(0,3);
+  shown.forEach((ml,i)=>{const img=document.createElement('img');img.className=`hist-dot p${shown.length}-${i}`;img.src=ml.foto;img.alt='';img.loading='lazy';img.style.zIndex=String(1+i);b.append(img);});
+  if(meals.length>3){const more=document.createElement('span');more.className='hist-more';more.textContent='+'+(meals.length-3);b.append(more);}
+  b.addEventListener('click',()=>{HIST.sel=iso;renderHistory();});
+  grid.append(b);
+ }
+ renderHistoryDay(porDia[HIST.sel]||[]);
+}
+function renderHistoryDay(meals){
+ const box=$('histDay'),data=HIST.data,dt=parseDia(HIST.sel);box.replaceChildren();
+ const h=document.createElement('h3');h.textContent=`${DIAS_SEMANA[dt.getDay()]}, ${dt.getDate()} de ${MESES[dt.getMonth()]}`;
+ const sub=document.createElement('span');sub.className='muted';sub.textContent=meals.length?`${meals.length} ${meals.length>1?'pratos registrados':'prato registrado'}`:'Sem registro';
+ const head=document.createElement('div');head.append(h,sub);box.append(head);
+ if(!meals.length){const p=document.createElement('p');p.className='muted';p.style.margin='0';p.textContent='Nenhum prato registrado neste dia.';box.append(p);return;}
+ const tot=meals.reduce((a,ml)=>{['kcal','proteina_g','carboidrato_g','lipideos_g'].forEach(k=>a[k]+=ml.totais[k]||0);return a;},{kcal:0,proteina_g:0,carboidrato_g:0,lipideos_g:0});
+ const pct=data.meta_kcal_dia?Math.round(tot.kcal/data.meta_kcal_dia*100):0;
+ const total=document.createElement('div');total.className='hist-total';
+ const tk=document.createElement('strong');tk.textContent=`${fmt(tot.kcal)} kcal`;
+ const tm=document.createElement('span');tm.className='muted';tm.textContent=`${pct}% da meta do dia (${fmt(data.meta_kcal_dia)} kcal)`;total.append(tk,tm);
+ const bar=document.createElement('div');bar.className='hist-bar';const fill=document.createElement('div');fill.style.width=Math.min(100,pct)+'%';fill.classList.toggle('over',pct>110);bar.append(fill);
+ const mac=document.createElement('div');mac.className='hist-macros';
+ [['p','P',tot.proteina_g],['c','C',tot.carboidrato_g],['g','G',tot.lipideos_g]].forEach(([cls,l,v])=>{const s=document.createElement('span');const b=document.createElement('b');b.className=cls;b.textContent=l;s.append(b,` ${fmt(v)} g`);mac.append(s);});
+ box.append(total,bar,mac);
+ meals.forEach(ml=>{
+  const art=document.createElement('article');art.className='hist-meal';
+  const img=document.createElement('img');img.src=ml.foto;img.alt=`Foto do prato (${ml.refeicao.toLowerCase()})`;img.loading='lazy';
+  const body=document.createElement('div');body.className='hist-meal-body';
+  const top=document.createElement('div');top.className='hist-meal-top';const t=document.createElement('strong');t.textContent=ml.refeicao;const hr=document.createElement('span');hr.textContent=ml.hora;top.append(t,hr);
+  const items=document.createElement('div');items.className='hist-meal-items';items.textContent=ml.itens.map(it=>`${it.nome} ${fmt(it.grams)} g`).join(' · ');
+  const foot=document.createElement('div');foot.className='hist-meal-foot';const k=document.createElement('strong');k.textContent=`${fmt(ml.totais.kcal)} kcal`;
+  const del=document.createElement('button');del.type='button';del.className='btn btn-sm hist-del';del.textContent='Apagar';del.setAttribute('aria-label',`Apagar ${ml.refeicao.toLowerCase()} das ${ml.hora}`);
+  del.addEventListener('click',async()=>{if(!confirm('Apagar este prato do histórico?'))return;try{await api(`/api/meals/${ml.id}`,{method:'DELETE'});if(STATE.mealId===ml.id)STATE.mealId=null;await loadHistory(HIST.mes);}catch(e){showStatus('histStatus','Não foi possível apagar: '+e.message,true);}});
+  foot.append(k,del);body.append(top,items,foot);art.append(img,body);box.append(art);
+ });
+}
+$('openHistory').addEventListener('click',()=>{openDialog('historyDialog');loadHistory(HIST.mes);});
+$('histPrev').addEventListener('click',()=>loadHistory(shiftMes(HIST.mes,-1)));
+$('histNext').addEventListener('click',()=>loadHistory(shiftMes(HIST.mes,1)));

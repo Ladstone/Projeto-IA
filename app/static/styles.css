@@ -239,6 +239,57 @@ dialog::backdrop { background: rgba(20, 26, 23, .45); }
 .nutrient-scroll { display: grid; }
 
 /* 7. Responsivo ------------------------------------------------------------ */
+/* Histórico: calendário do mês com as fotos dos pratos em bolinhas (até 3 por dia) */
+.history-dialog { width: min(980px, calc(100vw - 2 * var(--s4))); }
+.hist-stats { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.hist-stat { flex: 1 1 90px; background: var(--surface-2); border-radius: var(--r-md); padding: 10px var(--s3); display: flex; flex-direction: column; gap: 2px; }
+.hist-stat strong { font-size: 22px; }
+.hist-stat span { font-size: var(--fs-xs); color: var(--muted); }
+.hist-stat.accent { background: var(--primary-soft); }
+.hist-stat.accent strong, .hist-stat.accent span { color: var(--primary); }
+.hist-main { display: flex; flex-wrap: wrap; gap: var(--s5); align-items: flex-start; }
+.hist-cal { flex: 1 1 420px; min-width: 0; display: grid; gap: var(--s3); }
+.hist-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.hist-nav h3 { margin: 0; font-size: var(--fs-md); }
+.hist-nav .btn { width: var(--tap); padding: 0; font-size: 22px; line-height: 1; }
+.hist-nav .btn:disabled { opacity: .4; cursor: default; }
+.hist-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.hist-wd { text-align: center; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.hist-cell { position: relative; aspect-ratio: 1 / 1; padding: 0; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; overflow: hidden; font: inherit; color: inherit; }
+.hist-cell.has { background: var(--surface-2); }
+.hist-cell.today { border: 2px dashed var(--primary); }
+.hist-cell[aria-pressed="true"] { border: 2px solid var(--primary); }
+.hist-cell:hover:not(:disabled) { border-color: var(--primary); }
+.hist-cell:disabled { opacity: .5; cursor: default; }
+.hist-cell:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.hist-num { position: absolute; left: 4px; top: 3px; z-index: 5; font-size: 11px; font-weight: 600; line-height: 1; padding: 2px 4px; border-radius: 6px; color: var(--muted); }
+.hist-cell.has .hist-num { background: rgba(255, 255, 255, .9); color: var(--ink); }
+.hist-dot { position: absolute; border-radius: 50%; object-fit: cover; box-sizing: border-box; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(31, 42, 36, .25); background: var(--surface-2); }
+.hist-dot.p1-0 { left: 11%; top: 11%; width: 78%; height: 78%; }
+.hist-dot.p2-0 { left: 4%; top: 4%; width: 60%; height: 60%; }
+.hist-dot.p2-1 { left: 36%; top: 36%; width: 60%; height: 60%; }
+.hist-dot.p3-0 { left: 24%; top: 2%; width: 52%; height: 52%; }
+.hist-dot.p3-1 { left: 2%; top: 44%; width: 52%; height: 52%; }
+.hist-dot.p3-2 { left: 46%; top: 44%; width: 52%; height: 52%; }
+.hist-more { position: absolute; right: 3px; bottom: 3px; z-index: 6; font-size: 10px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 999px; padding: 2px 5px; line-height: 1; }
+.hist-day { flex: 1 1 280px; min-width: 0; display: grid; gap: var(--s3); align-content: start; background: var(--surface-2); border-radius: var(--r-md); padding: var(--s4); }
+.hist-day h3 { margin: 0; font-size: var(--fs-md); }
+.hist-day .muted { font-size: var(--fs-xs); }
+.hist-total { display: flex; justify-content: space-between; gap: var(--s2); font-size: var(--fs-xs); }
+.hist-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.hist-bar div { height: 100%; border-radius: 999px; background: var(--primary); }
+.hist-bar div.over { background: var(--warn); }
+.hist-macros { display: flex; flex-wrap: wrap; gap: var(--s3); font-size: var(--fs-xs); color: var(--muted); }
+.hist-macros b.p { color: var(--prot); } .hist-macros b.c { color: var(--carb); } .hist-macros b.g { color: var(--fat); }
+.hist-meal { display: flex; gap: var(--s3); align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px; }
+.hist-meal img { flex: 0 0 auto; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.hist-meal-body { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.hist-meal-top, .hist-meal-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); }
+.hist-meal-top span, .hist-meal-items { font-size: var(--fs-xs); color: var(--muted); }
+.hist-meal-items { line-height: 1.4; }
+.hist-meal-foot strong { font-size: var(--fs-xs); }
+.hist-del { color: var(--danger); }
+
 @media (max-width: 960px) {
   .layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "flow" "side" "details"; padding: var(--s5) var(--s4) 96px; gap: var(--s4); }
   .side { position: static; }
@@ -250,6 +301,8 @@ dialog::backdrop { background: rgba(20, 26, 23, .45); }
   .site-header { padding: 0 var(--s4); gap: var(--s2); }
   .header-actions .btn { padding: 0 var(--s3); }
   .header-actions .label-long { display: none; }
+  .hist-grid { gap: 4px; }
+  .history-dialog .dialog-body { padding: var(--s4); }
   .card { padding: var(--s4); }
   .drop { height: 260px; }
   .food-controls { grid-template-columns: 96px minmax(0, 1fr) auto; }

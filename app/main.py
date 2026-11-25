@@ -3,12 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from io import BytesIO
 import base64, json, os, sqlite3, threading
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 from fastapi import FastAPI,File,Form,UploadFile,HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -28,6 +29,10 @@ def db_init():
     with sqlite3.connect(DB) as con:
         con.execute('create table if not exists profile (id integer primary key check(id=1), data text not null)')
         con.execute('insert or ignore into profile (id,data) values (1,?)',(json.dumps(DEFAULT),))
+        # Histórico: cada prato analisado (com foto) vira um registro; correções atualizam o mesmo registro.
+        con.execute('create table if not exists meals (id integer primary key autoincrement, criado_em text not null, '
+                    'dia text not null, refeicao text not null, foto blob not null, itens text not null, totais text not null)')
+        con.execute('create index if not exists meals_dia on meals(dia)')
 
 def profile_get():
     with lock,sqlite3.connect(DB) as con:
@@ -74,6 +79,10 @@ class FoodInput(BaseModel):
     taco_id:int;grams:float;nome:str='';class_id:Optional[int]=None;note:str=''
 class RecalculateRequest(BaseModel):
     items:list[FoodInput]
+class MealItem(FoodInput):
+    nome_exibido:Optional[str]=None
+class MealUpdate(BaseModel):
+    items:list[MealItem]
 
 vision=None
 model_error=None
@@ -172,6 +181,87 @@ def post_recalculate(body:RecalculateRequest):
     try:return recalculate([b.model_dump() for b in body.items],profile_get())
     except ValueError as e:raise HTTPException(422,str(e))
 
+# ---- Histórico de pratos -------------------------------------------------------------
+THUMB_SIZE=256
+
+def refeicao_por_hora(quando:datetime)->str:
+    h=quando.hour+quando.minute/60
+    return 'Café da manhã' if h<10.5 else 'Almoço' if h<15 else 'Lanche' if h<18 else 'Jantar'
+
+def miniatura(image:Image.Image)->bytes:
+    """Quadrado central reduzido (JPEG): é o que aparece nas bolinhas do calendário."""
+    thumb=ImageOps.fit(image,(THUMB_SIZE,THUMB_SIZE),Image.Resampling.LANCZOS)
+    buffer=BytesIO();thumb.save(buffer,format='JPEG',quality=80)
+    return buffer.getvalue()
+
+def meal_payload(items:list[dict])->tuple[str,str]:
+    """Itens (nome para mostrar, gramas, id TACO) e totais da refeição, em JSON."""
+    itens=[{'nome':it.get('nome_exibido') or it.get('nome') or '','grams':round(float(it['grams']),1),
+            'taco_id':int(it['taco_id']),'class_id':it.get('class_id')} for it in items]
+    total=recalculate(items,profile_get())['total'] if items else {}
+    totais={k:round(float(total.get(k) or 0),1) for k in ('kcal','proteina_g','carboidrato_g','lipideos_g')}
+    return json.dumps(itens,ensure_ascii=False),json.dumps(totais)
+
+def meal_save(image:Image.Image,items:list[dict],meal_id:Optional[int]=None)->Optional[int]:
+    """Cria o registro do prato (ou substitui o do mesmo prato, quando a pessoa refaz o recorte).
+
+    Grava mesmo sem itens: a pessoa pode adicionar os alimentos à mão depois. Registro vazio não aparece no histórico."""
+    itens,totais=meal_payload(items)
+    foto=miniatura(image)
+    with lock,sqlite3.connect(DB) as con:
+        if meal_id and con.execute('select 1 from meals where id=?',(meal_id,)).fetchone():
+            con.execute('update meals set foto=?,itens=?,totais=? where id=?',(foto,itens,totais,meal_id))
+            return meal_id
+        agora=datetime.now()
+        cur=con.execute('insert into meals (criado_em,dia,refeicao,foto,itens,totais) values (?,?,?,?,?,?)',
+                        (agora.isoformat(timespec='seconds'),agora.date().isoformat(),refeicao_por_hora(agora),foto,itens,totais))
+        return cur.lastrowid
+
+def dias_seguidos(dias:set,hoje:date)->int:
+    """Dias seguidos com registro até hoje. Se hoje ainda não tem, conta até ontem (a sequência não zera de manhã)."""
+    d=hoje if hoje.isoformat() in dias else hoje-timedelta(days=1)
+    n=0
+    while d.isoformat() in dias:n+=1;d-=timedelta(days=1)
+    return n
+
+@app.get('/api/meals')
+def list_meals(mes:Optional[str]=None):
+    """Pratos do mês (AAAA-MM; padrão: mês atual), com o resumo do calendário."""
+    hoje=date.today();mes=mes or hoje.strftime('%Y-%m')
+    try:datetime.strptime(mes,'%Y-%m')
+    except ValueError:raise HTTPException(422,'mes deve ser AAAA-MM')
+    with lock,sqlite3.connect(DB) as con:
+        rows=con.execute("select id,criado_em,dia,refeicao,itens,totais from meals where dia like ? and itens!='[]' order by criado_em",(mes+'-%',)).fetchall()
+        todos={r[0] for r in con.execute("select distinct dia from meals where itens!='[]'")}
+    meals=[{'id':i,'criado_em':c,'dia':d,'hora':c[11:16],'refeicao':r,'itens':json.loads(it),'totais':json.loads(t),
+            'foto':f'/api/meals/{i}/foto'} for i,c,d,r,it,t in rows]
+    return {'mes':mes,'hoje':hoje.isoformat(),'meta_kcal_dia':profile_get()['kcal'],'meals':meals,
+            'resumo':{'dias':len({m['dia'] for m in meals}),'pratos':len(meals),'sequencia':dias_seguidos(todos,hoje)}}
+
+@app.get('/api/meals/{meal_id}/foto')
+def meal_photo(meal_id:int):
+    with lock,sqlite3.connect(DB) as con:row=con.execute('select foto from meals where id=?',(meal_id,)).fetchone()
+    if not row:raise HTTPException(404,'Prato não encontrado')
+    return Response(row[0],media_type='image/jpeg',headers={'Cache-Control':'no-cache'})
+
+@app.put('/api/meals/{meal_id}')
+def update_meal(meal_id:int,body:MealUpdate):
+    """Correções do usuário (alimento ou gramas) atualizam o mesmo registro. Sem itens ele some do histórico,
+    mas continua guardado: se a pessoa adicionar alimentos de novo, o prato volta com a mesma foto."""
+    items=[b.model_dump() for b in body.items]
+    try:itens,totais=meal_payload(items)
+    except ValueError as e:raise HTTPException(422,str(e))
+    with lock,sqlite3.connect(DB) as con:
+        if not con.execute('select 1 from meals where id=?',(meal_id,)).fetchone():raise HTTPException(404,'Prato não encontrado')
+        con.execute('update meals set itens=?,totais=? where id=?',(itens,totais,meal_id))
+    return {'ok':True}
+
+@app.delete('/api/meals/{meal_id}')
+def delete_meal(meal_id:int):
+    with lock,sqlite3.connect(DB) as con:n=con.execute('delete from meals where id=?',(meal_id,)).rowcount
+    if not n:raise HTTPException(404,'Prato não encontrado')
+    return {'ok':True}
+
 # MIN_REGION_FRACTION (área mínima de detecção) fica em app/vision.py para que o app
 # e scripts/evaluate_models.py usem exatamente a mesma regra.
 # Fração do PRATO que corresponde à porção padrão da categoria. Medir pelo prato (o recorte,
@@ -234,7 +324,7 @@ async def crop_suggestion(file:UploadFile=File(...)):
     return {'box':None if box is None else dict(zip(('x0','y0','x1','y1'),(round(v,4) for v in box)))}
 
 @app.post('/api/analyze')
-async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
+async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0),salvar:bool=Form(False),meal_id:Optional[int]=Form(None)):
     """Segmentação local, sem serviços externos, atalhos ou lista fixa de resultados.
 
     ``area_original``: quando o usuário recorta a foto em volta do prato, a fração da
@@ -247,6 +337,9 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
     a melhor classe elegível. Os candidatos são calculados para CADA imagem.
     Os escores sigmoid NÃO são probabilidades calibradas de acerto: como a região
     só contém pixels acima do limiar da classe, o score médio é sempre >= limiar.
+
+    ``salvar``: o app manda 1 e o prato entra no histórico (``meal_id`` substitui o registro do mesmo
+    prato quando a pessoa refaz o recorte). Sem o parâmetro (testes, scripts) nada é gravado.
     """
     if vision is None:
         raise HTTPException(503, model_error or 'Modelo local indisponível')
@@ -324,8 +417,9 @@ async def analyze(file:UploadFile=File(...),area_original:float=Form(1.0)):
              'Se estiverem erradas, substitua pela TACO. Informe o peso real e confirme o preparo.'
              if detected else
              'Nenhuma classe ultrapassou os critérios de detecção. Use a pesquisa TACO para adicionar os alimentos presentes.')
+    saved=meal_save(image,detected,meal_id) if salvar else None
     return {
-        'detected':detected,'unmatched':[],'preview_overlay':overlay,
+        'detected':detected,'unmatched':[],'preview_overlay':overlay,'meal_id':saved,
         'nutrition':recalculate(detected,profile_get()),
         'warning':warning,'mode':'local','analysis_quality':'experimental',
         'vision_debug':diagnostics,
