@@ -186,6 +186,27 @@ button { cursor: pointer; }
 .reco .tiny { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .reco h3 { margin: 2px 0; }
 .reco p { font-size: var(--fs-xs); color: var(--muted); }
+/* Feedback escrito pelo LLM (prato e mês) */
+.reco-ai { display: grid; gap: var(--s2); }
+.ai-resumo { margin: 0; font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
+.reco .ai-resumo { font-size: var(--fs-sm); color: var(--ink); }
+.ai-wait { margin: 0; }
+.ai-block strong { font-size: var(--fs-xs); }
+.ai-block ul { margin: 2px 0 0; padding-left: 1.1em; display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--muted); line-height: 1.45; }
+.ai-pos strong { color: var(--primary); }
+.hist-fb { display: grid; gap: 10px; background: var(--primary-soft); border: 1px solid #cfe0d6; border-radius: var(--r-md); padding: 14px; }
+.hist-fb-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s2); }
+.hist-fb-head h3 { margin: 0; font-size: 16px; color: #1f4a36; }
+.hist-fb .muted { color: #4b5852; }
+.hist-fb .ai-block ul { color: #4b5852; }
+#histFb { display: grid; gap: 10px; }
+#histFb:empty { display: none; }
+.ai-grid { display: grid; gap: 10px; }
+.ai-grid[hidden] { display: none; }
+.ai-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s2); }
+.ai-toggle { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--primary); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+.ai-toggle:hover { text-decoration: underline; }
+.ai-info { margin: 0; font-size: 12px; }
 
 /* Detalhes recolhíveis */
 .details details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }

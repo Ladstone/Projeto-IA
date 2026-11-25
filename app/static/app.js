@@ -51,9 +51,9 @@ function renderFoods(){
   const detailsBtn=document.createElement('button');detailsBtn.type='button';detailsBtn.className='link-btn';detailsBtn.textContent=Number(it.taco_id)>=9000?'Ver nutrientes · receita com itens da TACO':`Ver nutrientes · TACO #${it.taco_id}`;detailsBtn.addEventListener('click',()=>showFoodDetails(it.taco_id));outer.append(detailsBtn);list.append(outer);
  });
 }
-function renderEmptyStats(){[['Kcal','Kcal'],['Protein','Protein'],['Carbs','Carbs'],['Fats','Fats']].forEach(([stat,bar])=>{$('stat'+stat).textContent='—';$('bar'+bar).style.width='0%';$('bar'+bar).classList.remove('over');$('target'+stat).textContent='Referência da refeição: —'});$('mobileKcal').textContent='—';$('suggestions').replaceChildren();const d=document.createElement('div');d.className='reco';d.innerHTML='<div class="tiny">Próximo passo</div><h3>Envie uma foto</h3><p>Depois da análise, as sugestões comparam a refeição com as suas metas.</p>';$('suggestions').append(d);}
+function renderEmptyStats(){cancelFeedback();[['Kcal','Kcal'],['Protein','Protein'],['Carbs','Carbs'],['Fats','Fats']].forEach(([stat,bar])=>{$('stat'+stat).textContent='—';$('bar'+bar).style.width='0%';$('bar'+bar).classList.remove('over');$('target'+stat).textContent='Referência da refeição: —'});$('mobileKcal').textContent='—';$('suggestions').replaceChildren();const d=document.createElement('div');d.className='reco';d.innerHTML='<div class="tiny">Próximo passo</div><h3>Envie uma foto</h3><p>Depois da análise, as sugestões comparam a refeição com as suas metas.</p>';$('suggestions').append(d);}
 function renderStats(n){const stat=[['Kcal','kcal','kcal'],['Protein','proteina_g','g'],['Carbs','carboidrato_g','g'],['Fats','lipideos_g','g']];stat.forEach(([key,field,unit])=>{const cmp=n.comparacao[field];$('stat'+key).textContent=cmp.obtido.toLocaleString('pt-BR',{maximumFractionDigits:1});$('bar'+key).style.width=Math.min(100,Math.max(0,cmp.percentual||0))+'%';$('bar'+key).classList.toggle('over',(cmp.percentual||0)>135);$('target'+key).textContent=`Referência: ${cmp.alvo_refeicao.toLocaleString('pt-BR')} ${unit} (${cmp.percentual||0}%)`;});$('mobileKcal').textContent=n.comparacao.kcal.obtido.toLocaleString('pt-BR',{maximumFractionDigits:0});const parent=$('suggestions');parent.replaceChildren();n.recomendacoes.forEach(rec=>{const box=document.createElement('div');box.className='reco';const small=document.createElement('div');small.className='tiny';small.textContent=rec.tipo;const title=document.createElement('h3');title.textContent=rec.titulo;const p=document.createElement('p');p.textContent=rec.descricao;box.append(small,title,p);parent.append(box)});}
-async function recalc(){try{const data=await api('/api/recalculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});STATE.lastNutrition=data;renderStats(data);renderFullNutrition(data);syncMeal();}catch(err){showStatus('analysisStatus','Erro no cálculo: '+err.message,true)}}
+async function recalc(){try{const data=await api('/api/recalculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});STATE.lastNutrition=data;renderStats(data);renderFullNutrition(data);syncMeal();requestFeedback(1500);}catch(err){showStatus('analysisStatus','Erro no cálculo: '+err.message,true)}}
 // Correções (alimento, gramas, remover/adicionar) atualizam o mesmo registro do histórico.
 async function syncMeal(){if(!STATE.mealId)return;try{await api(`/api/meals/${STATE.mealId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods})});}catch(e){if(/não encontrado/i.test(e.message))STATE.mealId=null;}}
 function renderUnmatched(){
@@ -81,7 +81,7 @@ async function analyze(){
    STATE.foods=res.detected||[];STATE.unmatched=res.unmatched||[];STATE.mealId=res.meal_id??null;
    renderUnmatched();renderFoods();renderVisionDiagnostics(res.vision_debug);
    STATE.lastNutrition=res.nutrition;
-   if(STATE.foods.length){renderStats(res.nutrition);renderFullNutrition(res.nutrition);}
+   if(STATE.foods.length){renderStats(res.nutrition);renderFullNutrition(res.nutrition);requestFeedback(0);}
    else{renderEmptyStats();$('detailNutrients').replaceChildren();}
    if(res.preview_overlay){$('overlay').src=res.preview_overlay;$('dropArea').classList.toggle('show-overlay',$('overlaySwitch').checked);}
    $('photoStatus').textContent=`${STATE.foods.length} hipótese(s) visual(is)`;
@@ -231,7 +231,7 @@ async function loadHistory(mes){
    const dias=[...new Set(data.meals.map(m=>m.dia))];
    HIST.sel=data.hoje.startsWith(data.mes)?data.hoje:(dias.length?dias[dias.length-1]:`${data.mes}-01`);
   }
-  renderHistory();
+  renderHistory();loadMonthFeedback();
  }catch(e){showStatus('histStatus','Não foi possível carregar o histórico: '+e.message,true);}
 }
 function renderHistory(){
@@ -288,3 +288,62 @@ function renderHistoryDay(meals){
 $('openHistory').addEventListener('click',()=>{openDialog('historyDialog');loadHistory(HIST.mes);});
 $('histPrev').addEventListener('click',()=>loadHistory(shiftMes(HIST.mes,-1)));
 $('histNext').addEventListener('click',()=>loadHistory(shiftMes(HIST.mes,1)));
+
+// Feedback escrito pelo LLM. Prato: automático depois da análise e refeito ~1,5 s depois da última correção.
+// Se o serviço não responder, ficam as dicas por regra que renderStats já mostrou.
+var FB={seq:0,ctrl:null,timer:null};  // var: renderEmptyStats roda antes desta linha na carga da página
+function cancelFeedback(){if(!FB)return;clearTimeout(FB.timer);if(FB.ctrl)FB.ctrl.abort();FB.ctrl=null;FB.seq++;document.getElementById('aiLoading')?.remove();}
+function requestFeedback(delay=0){cancelFeedback();if(!STATE.foods.length)return;FB.timer=setTimeout(runFeedback,delay);}
+async function runFeedback(){
+ const seq=++FB.seq,ctrl=new AbortController();FB.ctrl=ctrl;
+ const parent=$('suggestions');document.getElementById('aiLoading')?.remove();
+ const wait=document.createElement('div');wait.id='aiLoading';wait.className='reco reco-ai';wait.setAttribute('role','status');
+ wait.innerHTML='<div class="tiny">Feedback do prato</div><p class="ai-wait">Escrevendo o feedback…</p>';parent.prepend(wait);
+ try{
+  const res=await api('/api/feedback/prato',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods}),signal:ctrl.signal});
+  if(seq!==FB.seq)return;wait.remove();
+  if(res.texto)renderAiFeedback(res.texto);
+ }catch(e){if(seq===FB.seq)wait.remove();}
+}
+function aiList(title,items,cls){
+ const box=document.createElement('div');box.className='ai-block '+(cls||'');
+ const h=document.createElement('strong');h.textContent=title;const ul=document.createElement('ul');
+ (items||[]).filter(Boolean).forEach(t=>{const li=document.createElement('li');li.textContent=t;ul.append(li);});
+ box.append(h,ul);return box;
+}
+function renderAiFeedback(t){
+ const card=document.createElement('div');card.className='reco reco-ai';
+ const tiny=document.createElement('div');tiny.className='tiny';tiny.textContent='Feedback do prato';
+ const resumo=document.createElement('p');resumo.className='ai-resumo';resumo.textContent=t.resumo||'';
+ card.append(tiny,resumo);
+ if(t.positivo)card.append(aiList('Ponto positivo',[t.positivo],'ai-pos'));
+ if(t.sugestoes?.length)card.append(aiList('Sugestões',t.sugestoes));
+ $('suggestions').replaceChildren(card);
+}
+
+// Feedback do mês: botão no Histórico; fica salvo e só é refeito quando a pessoa pede.
+function renderMonthFeedback(fb,pratosNoMes){
+ const box=$('histFb'),btn=$('histFbBtn');box.replaceChildren();
+ btn.disabled=!pratosNoMes;btn.textContent=fb?.texto?'Gerar de novo':'Gerar feedback';
+ if(!pratosNoMes){const p=document.createElement('p');p.className='muted ai-info';p.textContent='Sem pratos registrados neste mês.';box.append(p);return;}
+ if(!fb?.texto)return;
+ const t=fb.texto,resumo=document.createElement('p');resumo.className='ai-resumo';resumo.textContent=t.resumo||'';box.append(resumo);
+ // Destaques, atenção e metas ficam recolhidos para o cartão não empurrar o calendário.
+ const grid=document.createElement('div');grid.className='ai-grid';grid.id='histFbDetalhes';grid.hidden=true;
+ grid.append(aiList('Destaques',t.destaques,'ai-pos'),aiList('Para prestar atenção',t.atencao),aiList('Metas para o próximo mês',t.metas,'ai-meta'));box.append(grid);
+ const foot=document.createElement('div');foot.className='ai-foot';
+ const tg=document.createElement('button');tg.type='button';tg.className='ai-toggle';tg.textContent='Ver destaques e metas';tg.setAttribute('aria-expanded','false');tg.setAttribute('aria-controls','histFbDetalhes');
+ tg.addEventListener('click',()=>{const open=grid.hidden;grid.hidden=!open;tg.textContent=open?'Mostrar menos':'Ver destaques e metas';tg.setAttribute('aria-expanded',String(open));});
+ const info=document.createElement('span');info.className='muted ai-info';const d=new Date(fb.criado_em);
+ info.textContent=`Gerado em ${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${fb.n_pratos} ${fb.n_pratos>1?'pratos':'prato'}`+(fb.n_pratos!==pratosNoMes?' · há pratos novos':'');
+ foot.append(tg,info);box.append(foot);
+}
+async function loadMonthFeedback(){
+ const mes=HIST.mes,n=HIST.data?.meals.length||0;
+ try{const fb=await api(`/api/feedback/mes?mes=${mes}`);if(mes===HIST.mes)renderMonthFeedback(fb,n);}catch{renderMonthFeedback(null,n);}
+}
+$('histFbBtn').addEventListener('click',async()=>{
+ const btn=$('histFbBtn'),mes=HIST.mes;btn.disabled=true;btn.textContent='Gerando…';showStatus('histStatus','');
+ try{const fb=await api(`/api/feedback/mes?mes=${mes}`,{method:'POST'});if(mes===HIST.mes)renderMonthFeedback(fb,HIST.data.meals.length);}
+ catch(e){showStatus('histStatus',e.message,true);loadMonthFeedback();}
+});

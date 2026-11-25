@@ -17,6 +17,7 @@ from .nutrition import FOODS, FOOD_CLASS_MAP, DATA, META, details, recalculate
 from .vision import VisionService, CombinedVisionService, ClassOverrideService, LABEL_COLORS, CLASS_LABELS, MIN_REGION_FRACTION, food_crop_box
 from .unified_classes import RECIPES, VARIANTES, NOMES_EXIBIDOS, RECEITAS_UM_ITEM, RECEITA_ID_BASE
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
+from . import llm
 
 ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
 app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
@@ -33,6 +34,9 @@ def db_init():
         con.execute('create table if not exists meals (id integer primary key autoincrement, criado_em text not null, '
                     'dia text not null, refeicao text not null, foto blob not null, itens text not null, totais text not null)')
         con.execute('create index if not exists meals_dia on meals(dia)')
+        # Feedback do mês escrito pelo LLM: guardado para não gerar de novo a cada abertura.
+        con.execute('create table if not exists feedback_mes (mes text primary key, criado_em text not null, '
+                    'n_pratos integer not null, modelo text not null, texto text not null)')
 
 def profile_get():
     with lock,sqlite3.connect(DB) as con:
@@ -83,6 +87,8 @@ class MealItem(FoodInput):
     nome_exibido:Optional[str]=None
 class MealUpdate(BaseModel):
     items:list[MealItem]
+class FeedbackPrato(BaseModel):
+    items:list[MealItem]
 
 vision=None
 model_error=None
@@ -106,7 +112,7 @@ def index():return FileResponse(STATIC/'index.html')
 
 @app.get('/api/health')
 def health():
-    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':(vision.n_class if vision else len(FOOD_CLASS_MAP)),'training_sources':training_sources(),'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'nutrition':'TACO 4ª edição — 2011'}
+    return {'ok':True,'model_ready':vision is not None,'model_error':model_error,'taco_records':len(DATA),'image_classes':(vision.n_class if vision else len(FOOD_CLASS_MAP)),'training_sources':training_sources(),'taco_fields':len(META),'mode':'local-only','model':model_description(),'model_label':(vision.metadata.get('label') if vision else None),'llm':llm.configurado(),'nutrition':'TACO 4ª edição — 2011'}
 
 def training_sources():
     """Datasets do modelo ativo, lidos do .json (modelos antigos não registram e usaram só os dois primeiros)."""
@@ -249,6 +255,76 @@ def delete_meal(meal_id:int):
     with lock,sqlite3.connect(DB) as con:n=con.execute('delete from meals where id=?',(meal_id,)).rowcount
     if not n:raise HTTPException(404,'Prato não encontrado')
     return {'ok':True}
+
+# ---- Feedback escrito por LLM ------------------------------------------------------------
+# O app calcula tudo (TACO, metas, médias); o LLM só transforma os números em texto. Se ele não responder,
+# a resposta vem com 'texto': None e a página mostra as dicas por regra.
+VERDURAS_LEGUMES={'Salada','Tomate','Cenoura','Abóbora','Beterraba','Brócolis','Cebola','Milho'}
+
+def _objetivo(profile):
+    return OBJETIVOS.get(profile.get('objetivo'),(profile.get('objetivo'),))[0]
+
+@app.post('/api/feedback/prato')
+def feedback_prato(body:FeedbackPrato):
+    items=[b.model_dump() for b in body.items]
+    if not items:raise HTTPException(422,'Prato sem alimentos')
+    profile=profile_get()
+    try:n=recalculate(items,profile)
+    except ValueError as e:raise HTTPException(422,str(e))
+    dados={'objetivo':_objetivo(profile),'refeicoes_por_dia':profile['refeicoes'],
+           'alimentos':[{'nome':it.get('nome_exibido') or it['nome'],'gramas':round(it['grams'])} for it in items],
+           'totais_do_prato':n['total'],'meta_desta_refeicao':n['referencia_refeicao'],
+           'percentual_da_meta':{k:v['percentual'] for k,v in n['comparacao'].items()},
+           'dicas_calculadas_pelo_app':[r['titulo']+': '+r['descricao'] for r in n['recomendacoes']]}
+    try:texto,modelo=llm.feedback_prato(dados)
+    except llm.LLMIndisponivel as e:return {'texto':None,'motivo':str(e)}
+    return {'texto':texto,'modelo':modelo}
+
+def estatisticas_mes(meals:list[dict],profile:dict)->dict:
+    """Números do mês para o feedback (tudo calculado aqui, nada pelo LLM)."""
+    dias=sorted({m['dia'] for m in meals});nd=max(1,len(dias))
+    soma={k:sum(m['totais'].get(k,0) for m in meals) for k in ('kcal','proteina_g','carboidrato_g','lipideos_g','fibra_g')}
+    meta_ref=profile['kcal']/max(1,profile['refeicoes'])
+    freq={}
+    for m in meals:
+        for it in {i['nome'] for i in m['itens']}:freq[it]=freq.get(it,0)+1
+    com_verdura=sum(any(i['nome'] in VERDURAS_LEGUMES or (i.get('class_id') and FOOD_CLASS_MAP.get(i['class_id'],{}).get('nome') in VERDURAS_LEGUMES)
+                        for i in m['itens']) for m in meals)
+    return {
+        'objetivo':_objetivo(profile),
+        'metas_diarias':{'kcal':profile['kcal'],'proteina_g':profile['proteina_g'],'carboidrato_g':profile['carboidrato_g'],'lipideos_g':profile['lipideos_g']},
+        'refeicoes_planejadas_por_dia':profile['refeicoes'],
+        'dias_com_registro':len(dias),'pratos_registrados':len(meals),
+        'pratos_por_dia_registrado':round(len(meals)/nd,1),
+        'media_por_dia_registrado':{k:round(v/nd,1) for k,v in soma.items()},
+        'media_por_prato':{k:round(v/max(1,len(meals)),1) for k,v in soma.items()},
+        'meta_kcal_por_refeicao':round(meta_ref),
+        'pratos_acima_de_130_por_cento_da_meta_da_refeicao':sum(m['totais'].get('kcal',0)>1.3*meta_ref for m in meals),
+        'pratos_abaixo_de_70_por_cento_da_meta_da_refeicao':sum(m['totais'].get('kcal',0)<0.7*meta_ref for m in meals),
+        'pratos_com_verdura_ou_legume':com_verdura,
+        'alimentos_mais_frequentes':[{'nome':k,'pratos':v} for k,v in sorted(freq.items(),key=lambda x:(-x[1],x[0]))[:8]],
+        'alimentos_diferentes':len(freq),
+    }
+
+@app.get('/api/feedback/mes')
+def get_feedback_mes(mes:str):
+    with lock,sqlite3.connect(DB) as con:
+        row=con.execute('select criado_em,n_pratos,modelo,texto from feedback_mes where mes=?',(mes,)).fetchone()
+    if not row:return {'mes':mes,'texto':None}
+    return {'mes':mes,'criado_em':row[0],'n_pratos':row[1],'modelo':row[2],'texto':json.loads(row[3])}
+
+@app.post('/api/feedback/mes')
+def post_feedback_mes(mes:str):
+    meals=list_meals(mes)['meals']
+    if not meals:raise HTTPException(422,'Nenhum prato registrado neste mês')
+    dados={'mes':mes,**estatisticas_mes(meals,profile_get())}
+    try:texto,modelo=llm.feedback_mes(dados)
+    except llm.LLMIndisponivel as e:raise HTTPException(503,'Não foi possível gerar o feedback agora. Tente de novo em alguns minutos.') from e
+    agora=datetime.now().isoformat(timespec='seconds')
+    with lock,sqlite3.connect(DB) as con:
+        con.execute('insert or replace into feedback_mes (mes,criado_em,n_pratos,modelo,texto) values (?,?,?,?,?)',
+                    (mes,agora,len(meals),modelo,json.dumps(texto,ensure_ascii=False)))
+    return {'mes':mes,'criado_em':agora,'n_pratos':len(meals),'modelo':modelo,'texto':texto}
 
 # MIN_REGION_FRACTION (área mínima de detecção) fica em app/vision.py para que o app
 # e scripts/evaluate_models.py usem exatamente a mesma regra.

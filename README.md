@@ -15,6 +15,8 @@ Protótipo executável de **interface + módulo de inteligência artificial + m�
 3. Informar os gramas da porção (a foto **não mede peso**), consultar os **26 campos da Tabela 1 da TACO** e recalcular os totais.
 4. Configurar metas pessoais de kcal/proteína/carboidratos/lipídios, comparar a refeição com essas metas e obter sugestões baseadas em regras.
 5. Abrir **Diagnóstico do modelo** na interface para conferir regiões, scores e limiares calculados para cada fotografia.
+6. **Histórico de pratos:** cada prato analisado fica salvo no computador e aparece num calendário do mês, com as fotos em bolinhas.
+7. **Feedback escrito por IA** (opcional, Gemini API gratuita): um texto curto sobre cada prato, automático após a análise, e um feedback do mês pelo botão no Histórico. O app calcula todos os números pela TACO e o modelo só redige; sem chave, ficam as dicas por regra.
 
 **Não há lista fixa de itens retornados:** o backend calcula uma máscara nova para cada foto. Isso **não impede** que a rede erre repetidamente nas mesmas classes, pois o treinamento atual é limitado.
 
@@ -28,7 +30,9 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Abra **http://127.0.0.1:8000**. Para encerrar, `Ctrl + C`. Nenhum `.bat`, ativação de scripts ou chave externa é necessário. Se a porta 8000 estiver ocupada, tente `--port 8001` e abra `http://127.0.0.1:8001`.
+Abra **http://127.0.0.1:8000**. Para encerrar, `Ctrl + C`. Nenhum `.bat`, ativação de scripts ou chave externa é necessário.
+
+**Feedback por IA (opcional):** copie `.env.example` para `.env` e cole em `GEMINI_API_KEY` uma chave gratuita de https://aistudio.google.com ("Get API key"). O `.env` não vai para o git. Só a lista de alimentos, gramas, totais e metas é enviada; a foto não sai do computador. Se o modelo estiver ocupado (comum no plano gratuito), o app tenta outros modelos Flash e, sem resposta, mostra as dicas por regra. Se a porta 8000 estiver ocupada, tente `--port 8001` e abra `http://127.0.0.1:8001`.
 
 Para editar com recarregamento automático, substitua a última linha por:
 
