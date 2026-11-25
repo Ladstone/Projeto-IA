@@ -19,9 +19,9 @@ def test_analyze_has_only_local_mode():
     assert result.status_code==200,result.text
     data=result.json()
     assert data['mode']=='local'
-    assert len(data['vision_debug'])==21
+    assert len(data['vision_debug'])==28  # padrão: combinação v2 + classes novas do v3 + purê do v3d
     assert data['analysis_quality']=='experimental'
-    assert all(it['class_id'] in range(1,22) for it in data['detected'])
+    assert all(it['class_id'] in range(1,29) for it in data['detected'])
 
 def test_different_examples_generate_different_segmentation_masks():
     root=Path(__file__).parents[1]

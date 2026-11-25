@@ -19,8 +19,8 @@ from .unified_classes import RECIPES, VARIANTES, NOMES_EXIBIDOS, RECEITAS_UM_ITE
 from .metas import calcular_metas, normaliza_objetivo, OBJETIVOS, ATIVIDADES
 from . import llm
 
-ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=Path(os.getenv('PRATOMETRIA_MODEL') or ROOT/'models'/'unified_21class.pt');DB=ROOT/'app'/'data'/'profile.sqlite3'
-app=FastAPI(title='PratoMetria API',version='1.0.0',description='Protótipo acadêmico local: MyFood + Brazilian Food Images + TACO + recomendações')
+ROOT=Path(__file__).resolve().parents[1];STATIC=ROOT/'app'/'static';MODEL=ROOT/'models'/'unified_21class.pt';MODEL_NOVAS=ROOT/'models'/'unified_28class_v3.pt';MODEL_PURE=ROOT/'models'/'unified_28class_v3d.pt';DB=ROOT/'app'/'data'/'profile.sqlite3'
+app=FastAPI(title='PratoMetria API',version='1.0.0',description='Análise de refeições por foto: segmentação local (PyTorch) + TACO + metas, histórico e feedback')
 app.mount('/static',StaticFiles(directory=STATIC),name='static')
 lock=threading.Lock();model_lock=threading.Lock()
 DEFAULT={'objetivo':'hipertrofia','kcal':2400,'proteina_g':150,'carboidrato_g':290,'lipideos_g':75,'refeicoes':3}
@@ -90,19 +90,29 @@ class MealUpdate(BaseModel):
 class FeedbackPrato(BaseModel):
     items:list[MealItem]
 
+def carregar_visao(env=os.environ):
+    """Monta o serviço de visão. Padrão (sem variáveis de ambiente): a combinação, com base v2 (prato feito)
+    + classes novas do v3 (CombinedVisionService) + purê do v3d (ClassOverrideService); ver app/vision.py
+    e docs/RESULTADOS.md. PRATOMETRIA_MODEL=arquivo.pt sobe SÓ esse modelo (ex.: o v2 puro, de backup),
+    a não ser que PRATOMETRIA_MODEL_NOVAS / PRATOMETRIA_MODEL_PURE também sejam informadas."""
+    base=Path(env.get('PRATOMETRIA_MODEL') or MODEL)
+    if not base.exists():raise FileNotFoundError('Arquivo do modelo não encontrado em models/.')
+    padrao=not env.get('PRATOMETRIA_MODEL')
+    novas=env.get('PRATOMETRIA_MODEL_NOVAS') or (str(MODEL_NOVAS) if padrao and MODEL_NOVAS.exists() else '')
+    pure=env.get('PRATOMETRIA_MODEL_PURE') or (str(MODEL_PURE) if padrao and MODEL_PURE.exists() else '')
+    service=VisionService(base)
+    if novas:service=CombinedVisionService(service,VisionService(Path(novas)))
+    if pure:service=ClassOverrideService(service,VisionService(Path(pure)))
+    return service
+
 vision=None
 model_error=None
 try:
     import torch
     torch.set_num_threads(3)
-    if MODEL.exists():
-        vision=VisionService(MODEL)
-        # Opcional: PRATOMETRIA_MODEL_NOVAS=outro .pt com mais classes (ex.: v3). Fotos com comida nova usam
-        # esse modelo; as demais continuam com o PRATOMETRIA_MODEL. Ver CombinedVisionService em vision.py.
-        if os.getenv('PRATOMETRIA_MODEL_NOVAS'):vision=CombinedVisionService(vision,VisionService(Path(os.environ['PRATOMETRIA_MODEL_NOVAS'])))
-        # Opcional: PRATOMETRIA_MODEL_PURE=modelo especialista (ex.: v3d) cujo Purê vale por cima do resultado acima.
-        if os.getenv('PRATOMETRIA_MODEL_PURE'):vision=ClassOverrideService(vision,VisionService(Path(os.environ['PRATOMETRIA_MODEL_PURE'])))
-    else:model_error='Arquivo do modelo ainda não encontrado. Rode scripts/train_unified.py.'
+    vision=carregar_visao()
+except FileNotFoundError as exc:
+    model_error=str(exc)
 except Exception as exc:
     model_error=f'Não foi possível carregar pesos: {exc}'
 db_init()

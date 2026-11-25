@@ -72,7 +72,7 @@
    <div class="details-body"><p>Calculados a partir dos alimentos e gramas confirmados. Se um ingrediente não tem o dado na TACO, o campo aparece como não calculável, e não como zero.</p><div id="detailNutrients" class="nutrient-grid"></div></div>
   </details>
   <details><summary>Diagnóstico do modelo (para desenvolvedores)</summary>
-   <div class="details-body"><p>Rede neural local treinada com MyFood + Brazilian Food Images (21 categorias visuais), sem envio da foto a serviços externos. O score não é probabilidade calibrada de acerto.</p>
+   <div class="details-body"><p><span id="modelSummary">Rede neural local</span>. A foto não sai do computador. O score não é probabilidade calibrada de acerto.</p>
     <div id="visionDiagnostics">Analise uma foto para ver as saídas do modelo.</div></div>
   </details>
  </div>
@@ -157,6 +157,6 @@
   <p class="muted"><a href="/api/taco/pdf" target="_blank" rel="noopener">Abrir a TACO original (PDF)</a> para ácidos graxos e aminoácidos.</p></div>
 </dialog>
 
-<script src="/static/app.js?v=23" defer></script>
+<script src="/static/app.js?v=24" defer></script>
 </body>
 </html>

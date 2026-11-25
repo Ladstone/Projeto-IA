@@ -1,6 +1,6 @@
 # PratoMetria — resumo das mudanças
 
-Comparação da versão original (commit `7a9a682`) com a versão atual da `main`. Atualizado em 23/11/2026.
+Comparação da versão original (commit `7a9a682`) com a versão atual da `main`. Atualizado em 25/11/2026. Para os resultados em uma página, ver `docs/RESULTADOS.md`.
 
 ## 1. Visão geral
 
@@ -10,8 +10,9 @@ Comparação da versão original (commit `7a9a682`) com a versão atual da `main
   - **Frontend novo.**
   - **Fase B:** um novo modelo de IA (v2), treinado de outro jeito e avaliado em fotos separadas.
   - **Fase C:** o modelo v3, com um terceiro dataset (MyFoodRepo) e 7 categorias novas, 28 no total.
-- **Estado:** o app usa o **v3**, treinado por 15 épocas. O v2, o v2 piloto (3 épocas) e o v1 estão guardados como backup. Os testes passam (57 com os três datasets disponíveis; sem eles, 54 passam e 3 são pulados).
-- **É um protótipo:** a identificação continua experimental.
+  - **Fase D (24 e 25/11/2026):** combinação de modelos, purê, histórico de pratos e feedback por IA.
+- **Estado (25/11/2026):** o app usa por padrão a **combinação**: base v2 + categorias novas do v3 + purê do v3d. O v2 puro fica de backup (`models/unified_21class_v2.*`). Os testes passam (80 sem os datasets; os que leem os ZIPs são pulados).
+- **Limite:** a identificação erra e as gramas são estimativas; o usuário confere e corrige.
 
 ## 2. O que mudou
 
@@ -70,7 +71,7 @@ O v1 errava de um jeito sistemático:
 - Treino: `scripts/train_v2.py`
 - Exportação: `scripts/export_v2.py`
 - Avaliação: `scripts/evaluate_models.py`
-- Modelos: `models/` (`unified_21class.*` = ativo; `unified_21class_v2.*`, `unified_21class_v2_piloto.*` e `unified_21class_v1.*` = cópias de cada versão)
+- Modelos: `models/` (`unified_21class.*` = base v2; `unified_21class_v2.*` = cópia de backup; os pesos do piloto e do v1 saíram do repositório em 25/11/2026 e estão no histórico do git)
 - Testes: `tests/test_modelos.py`
 
 ### Fase C — modelo v3 com MyFoodRepo (23/11/2026)
@@ -91,6 +92,8 @@ O v1 errava de um jeito sistemático:
 - **Purê do v3d na porta 8001 (24/11/2026, em teste):** `ClassOverrideService` em `app/vision.py`, variável `PRATOMETRIA_MODEL_PURE`. Onde o v3d marca purê, vale o purê; o resto continua com a combinação v2+v3. Números em `docs/AVALIACAO.md`.
 - **Histórico de pratos (25/11/2026):** cada prato analisado no app é salvo sozinho (tabela `meals` no SQLite local, com miniatura de 256 px do recorte); correções atualizam o mesmo registro. Botão "Histórico" abre o calendário do mês com até 3 fotos por dia em bolinhas, dias registrados e pratos no mês; clicando num dia aparecem os pratos, o total contra a meta e a opção de apagar. API: `GET /api/meals?mes=AAAA-MM`, `GET /api/meals/{id}/foto`, `PUT` e `DELETE /api/meals/{id}`; `/api/analyze` só grava com `salvar=1`. Testes em `tests/test_historico.py`. Base para o feedback mensal.
 - **Feedback por IA (25/11/2026):** `app/llm.py` chama a Gemini API (plano gratuito; chave no `.env`, modelo em `.env.example`). Feedback do prato automático após a análise e refeito 1,5 s depois da última correção (`POST /api/feedback/prato`); feedback do mês pelo botão no Histórico, salvo na tabela `feedback_mes` (`GET`/`POST /api/feedback/mes`). O app calcula todos os números (TACO, metas, médias do mês em `estatisticas_mes`); o LLM só redige, em JSON com esquema fixo. Ordem de modelos (medida no plano gratuito): Flash-Lite → 3.5 Flash-Lite → 3.1 Flash-Lite → Flash, no máximo 12 s por modelo e 20 s no total; modelo com 429/404 sai da fila por 10 min; pedido repetido reaproveita a resposta. Sem resposta, o card avisa, oferece "Tentar de novo" e valem as dicas por regra. Testes em `tests/test_feedback.py` (sem chamar a API).
+- **Combinação vira o padrão (25/11/2026):** sem variáveis de ambiente, `carregar_visao` em `app/main.py` monta v2 + v3 + purê do v3d. `PRATOMETRIA_MODEL=models/unified_21class_v2.pt` sobe só o v2 (backup). O teste com fotos novas, independente do mini teste, continua pendente.
+- **Limpeza do repositório (25/11/2026):** saíram os pesos que o app não usa mais (`myfood_unet.pt`, v1 e v2 piloto); continuam no histórico do git (até o commit `c525370`) e as métricas deles seguem em `docs/METRICAS_*.json`. README reescrito e `docs/RESULTADOS.md` criado.
 - **App:** aceita modelos de 21 ou 28 classes (lê `classes` do `.json`) e ganhou a variável `PRATOMETRIA_MODEL` para testar outro modelo sem trocar o ativo.
 - **Treino:** 15 épocas, cerca de 12 min cada em CPU (~3 h). Interrompido uma vez por falta de RAM e retomado do checkpoint. Melhor época: 15.
 
@@ -165,21 +168,19 @@ O resultado esperado é **54 passam e 3 são pulados**. Os 3 pulados precisam do
 
 Só existe a branch **`main`**, no computador e no GitHub. As branches de trabalho (`fase-a-correcoes`, `frontend-redesign`, `fase-b-modelo`, `integracao`) já tinham sido incorporadas à `main` e foram apagadas em 17/11/2026.
 
-**Para voltar ao v2, ao piloto ou ao v1:** copie os arquivos do backup por cima do modelo ativo. O nome `unified_21class.*` foi mantido para o ativo mesmo com 28 classes; o `.json` informa o número de classes.
+**Para trocar de modelo** não é preciso copiar arquivos: use as variáveis de ambiente antes de subir o servidor.
 ```powershell
-# v2 (21 classes)
-Copy-Item models\unified_21class_v2.pt models\unified_21class.pt
-Copy-Item models\unified_21class_v2.json models\unified_21class.json
-# piloto
-Copy-Item models\unified_21class_v2_piloto.pt models\unified_21class.pt
-Copy-Item models\unified_21class_v2_piloto.json models\unified_21class.json
-# v1
-Copy-Item models\unified_21class_v1.pt models\unified_21class.pt
-Copy-Item models\unified_21class_v1.json models\unified_21class.json
-# voltar ao v3
-Copy-Item models\unified_28class_v3.pt models\unified_21class.pt
-Copy-Item models\unified_28class_v3.json models\unified_21class.json
+# padrão (sem variáveis): combinação v2 + categorias novas do v3 + purê do v3d
+# só o v2 (backup)
+$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
+# só o v3
+$env:PRATOMETRIA_MODEL = "models/unified_28class_v3.pt"
+# montar outra combinação
+$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"
+$env:PRATOMETRIA_MODEL_NOVAS = "models/unified_28class_v3.pt"
+$env:PRATOMETRIA_MODEL_PURE = "models/unified_28class_v3d.pt"
 ```
+Os pesos do v2 piloto e do v1 não estão mais no repositório (ver o histórico do git até o commit `c525370`).
 Para só **testar** outro modelo, sem trocar o ativo: `$env:PRATOMETRIA_MODEL = "models/unified_21class_v2.pt"` antes de subir o app (de preferência em outra porta).
 O app lê a arquitetura pelo `.json`, então não é preciso mudar código. Com outro modelo ativo, `tests/test_modelos.py` vai falhar, porque ele confere que o ativo é o v3 de 28 classes; com o v1, os testes de imagem marrom e de ruído também falham.
 

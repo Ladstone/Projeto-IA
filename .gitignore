@@ -18,3 +18,6 @@ models/checkpoint_*.pt
 
 # Execuções de treino v2 (checkpoints por época, logs): não comitar
 models/runs/
+
+# Arquivos locais do assistente de código
+.claude/

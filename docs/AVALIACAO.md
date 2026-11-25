@@ -1,6 +1,8 @@
 # Avaliação e limitações verificadas
 
-### Purê do v3d por cima da combinação (porta 8001, em teste desde 24/11/2026)
+> **Padrão do app desde 25/11/2026:** a combinação descrita nas duas primeiras seções (v2 + categorias novas do v3 + purê do v3d). Até essa data ela rodava só na porta 8001, em teste. Resumo em uma página: [RESULTADOS.md](RESULTADOS.md). Os pesos do v1 e do v2 piloto saíram do repositório; as medidas deles continuam aqui como histórico.
+
+### Purê do v3d por cima da combinação (desde 24/11/2026)
 
 **Problema:** o v2 quase não conhece purê. Em 1.298 fotos de purê de batata (dataset "mashed potato" do images.cv, 256 × 256, só com a etiqueta "tem purê"), o v2 viu purê em **1%** e chamou a maior parte de **arroz** (47%), frango ou carne. No "almoço jpão" o purê saía como frango.
 
@@ -25,11 +27,11 @@ Melhor época 7 de 8; F1 de presença na validação 0,82 (purê 0,83, arroz 0,9
 
 Fotos novas de 24/11: "almoço jpão" passa de arroz, carne e **frango** para arroz, carne e **purê**. No "almoço caio" aparece o purê, mas o frango sai quase todo como carne e o arroz some (o purê muda o recorte sugerido). "almoço 2 daniel" e "almoço ladstone" ficam iguais. Cada foto passa por três modelos; na prática a demora não é perceptível.
 
-**Cuidados:** os rótulos de purê vêm de um modelo (v3c), então parte do que o v3d aprendeu são acertos do próprio v3c; o teste das 196 fotos mede se generalizou. A decisão de usar só o purê foi tomada olhando o mini teste e as 4 fotos de 24/11, que por isso ficam otimistas. O app principal (porta 8000) continua só com o v2.
+**Cuidados:** os rótulos de purê vêm de um modelo (v3c), então parte do que o v3d aprendeu são acertos do próprio v3c; o teste das 196 fotos mede se generalizou. A decisão de usar só o purê foi tomada olhando o mini teste e as 4 fotos de 24/11, que por isso ficam otimistas. Por isso falta um teste com fotos novas, que ninguém usou para decidir.
 
-### Combinação v2+v3 (porta 8001, em teste desde 24/11/2026)
+### Combinação v2+v3 (desde 24/11/2026)
 
-O app passa a foto nos dois modelos. Se o v3 acha alguma **categoria nova** (Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer ou Lasanha) cobrindo **10% ou mais** do recorte, a foto inteira usa o v3; senão, vale o v2 (comida nova menor só entra onde o v2 não viu comida nenhuma). Assim um prato feito comum fica com o resultado do v2, e o v3 não consegue trocar batata frita por macarrão nem carne por frango. Código: `CombinedVisionService` em `app/vision.py`; ligado pela variável `PRATOMETRIA_MODEL_NOVAS`. O app ativo (porta 8000) **continua só com o v2**.
+O app passa a foto nos dois modelos. Se o v3 acha alguma **categoria nova** (Brócolis, Batata cozida, Peixe, Pão, Cebola, Hambúrguer ou Lasanha) cobrindo **10% ou mais** do recorte, a foto inteira usa o v3; senão, vale o v2 (comida nova menor só entra onde o v2 não viu comida nenhuma). Assim um prato feito comum fica com o resultado do v2, e o v3 não consegue trocar batata frita por macarrão nem carne por frango. Código: `CombinedVisionService` em `app/vision.py`; ligado pela variável `PRATOMETRIA_MODEL_NOVAS`. Sem variáveis de ambiente, o app já sobe a combinação.
 
 Mini teste com 12 fotos reais de pratos (`docs/FOTOS_REAIS_GABARITO.json`, `scripts/avaliar_fotos_reais.py`):
 

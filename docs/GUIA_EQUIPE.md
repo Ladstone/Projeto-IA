@@ -4,16 +4,17 @@
 
 Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo de resposta**, apresentação do funcionamento e link para o repositório GitHub.
 
-**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede ativa (v2) prevê 21 categorias (o v3 alternativo, 28); a TACO fornece informações de 597 registros após seleção do preparo.
+**O que NÃO afirmar:** que todas as refeições são identificadas corretamente, que a rede reconhece 597 classes, ou que a foto mede peso de alimentos. A rede prevê 28 categorias visuais (combinação de três modelos; o v2 de backup, 21); a TACO fornece informações de 597 registros após seleção do preparo. O texto do feedback é escrito por um modelo de linguagem, mas os números são calculados pelo app.
 
 ## Primeiro acesso
 
 1. Clonar o repositório: `git clone https://github.com/Ladstone/Projeto-IA.git`.
 2. Abrir o PowerShell nessa pasta. Seguir os três comandos do `README.md`.
-3. Abrir `http://127.0.0.1:8000/api/health`: verificar `model_ready: true`, `taco_records: 597` e `mode: local-only`.
+3. Abrir `http://127.0.0.1:8000/api/health`: verificar `model_ready: true`, `taco_records: 597`, `image_classes: 28` e `llm: true` (se o `.env` tiver a chave do Gemini; sem ela, `false`).
 4. Abrir `/`: salvar metas, selecionar uma foto, analisar e revisar alimentos.
 5. Expandir **Diagnóstico do modelo (para desenvolvedores)**. A saída é calculada para cada imagem. Se o modelo confundir alimentos, registrar o caso e guardar a foto com permissão.
 6. Corrigir os alimentos pela busca TACO, informar as quantidades em gramas e confirmar as recomendações.
+7. Abrir **Histórico**: o prato analisado já está no calendário. Com a chave configurada, gerar o feedback do mês.
 
 ## Responsabilidades recomendadas
 
@@ -35,13 +36,14 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 1. Configurar metas.
 2. Enviar a foto de um prato, ajustar o recorte sugerido e observar as sugestões. Use fotos tiradas pela equipe; a página não tem mais fotos de exemplo.
 3. Se um item estiver errado, abrir a busca TACO e substituí-lo por um preparo correto; mostrar o recálculo de nutrientes.
-4. Mostrar que o módulo visual chama uma rede local (`app/vision.py`) e usa pesos de `models/unified_21class.pt`.
-5. Mostrar que o treinamento lê **MyFood, Brazilian Food Images e MyFoodRepo** (`scripts/train_v2.py`), explicar a supervisão parcial das máscaras brasileiras e a comparação v2 × v3 (`docs/RESUMO_MUDANCAS.md`, seção 3).
-6. Exibir os testes (`python -m pytest -q`) e ser claro sobre erros da IA.
+4. Mostrar o histórico no calendário e o feedback escrito (do prato e do mês), explicando que a IA de texto só redige números que o app calculou.
+5. Mostrar que o módulo visual roda no computador (`app/vision.py`) e combina três modelos: v2, v3 e v3d (`docs/RESULTADOS.md`).
+6. Mostrar que o treinamento lê **MyFood, Brazilian Food Images e MyFoodRepo** (`scripts/train_v2.py`), explicar a supervisão parcial das máscaras brasileiras e a comparação v2 × v3 (`docs/RESUMO_MUDANCAS.md`, seção 3).
+7. Exibir os testes (`python -m pytest -q`) e ser claro sobre erros da IA.
 
 ## GitHub
 
-O repositório é https://github.com/Ladstone/Projeto-IA (branch `main`). Antes de cada envio, conferir `git status` e o conteúdo que será publicado. **Evitar subir `.venv`, arquivos ZIP brutos dos datasets, `models/runs/` (checkpoints de treino), `profile.sqlite3`, imagens privadas e informações pessoais.** O `.gitignore` já exclui esses itens.
+O repositório é https://github.com/Ladstone/Projeto-IA (branch `main`). Antes de cada envio, conferir `git status` e o conteúdo que será publicado. **Evitar subir `.venv`, arquivos ZIP brutos dos datasets, `models/runs/` (checkpoints de treino), `profile.sqlite3`, o `.env` com a chave do Gemini, imagens privadas e informações pessoais.** O `.gitignore` já exclui esses itens.
 
 ## Limitações de redistribuição
 
