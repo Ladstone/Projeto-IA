@@ -299,11 +299,19 @@ async function runFeedback(){
  const parent=$('suggestions');document.getElementById('aiLoading')?.remove();
  const wait=document.createElement('div');wait.id='aiLoading';wait.className='reco reco-ai';wait.setAttribute('role','status');
  wait.innerHTML='<div class="tiny">Feedback do prato</div><p class="ai-wait">Escrevendo o feedback…</p>';parent.prepend(wait);
+ const limite=setTimeout(()=>ctrl.abort(),30000);  // o servidor desiste em ~20 s; isto é só uma garantia
+ // Sem texto da IA, o cartão de espera vira um aviso curto e as dicas por regra continuam abaixo.
+ const semFeedback=()=>{
+  wait.querySelector('.ai-wait').textContent='Feedback indisponível agora. Seguem as dicas calculadas.';
+  const again=document.createElement('button');again.type='button';again.className='btn btn-sm ai-retry';again.textContent='Tentar de novo';
+  again.addEventListener('click',()=>requestFeedback(0));wait.append(again);
+ };
  try{
   const res=await api('/api/feedback/prato',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:STATE.foods}),signal:ctrl.signal});
-  if(seq!==FB.seq)return;wait.remove();
-  if(res.texto)renderAiFeedback(res.texto);
- }catch(e){if(seq===FB.seq)wait.remove();}
+  if(seq!==FB.seq)return;
+  if(res.texto){wait.remove();renderAiFeedback(res.texto);}else semFeedback();
+ }catch(e){if(seq===FB.seq)semFeedback();}
+ finally{clearTimeout(limite);}
 }
 function aiList(title,items,cls){
  const box=document.createElement('div');box.className='ai-block '+(cls||'');

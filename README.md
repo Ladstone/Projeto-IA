@@ -32,7 +32,7 @@ python -m venv .venv
 
 Abra **http://127.0.0.1:8000**. Para encerrar, `Ctrl + C`. Nenhum `.bat`, ativação de scripts ou chave externa é necessário.
 
-**Feedback por IA (opcional):** copie `.env.example` para `.env` e cole em `GEMINI_API_KEY` uma chave gratuita de https://aistudio.google.com ("Get API key"). O `.env` não vai para o git. Só a lista de alimentos, gramas, totais e metas é enviada; a foto não sai do computador. Se o modelo estiver ocupado (comum no plano gratuito), o app tenta outros modelos Flash e, sem resposta, mostra as dicas por regra. Se a porta 8000 estiver ocupada, tente `--port 8001` e abra `http://127.0.0.1:8001`.
+**Feedback por IA (opcional):** copie `.env.example` para `.env` e cole em `GEMINI_API_KEY` uma chave gratuita de https://aistudio.google.com ("Get API key"). O `.env` não vai para o git. Só a lista de alimentos, gramas, totais e metas é enviada; a foto não sai do computador. Se o modelo estiver ocupado (comum no plano gratuito), o app tenta outros modelos Flash e, sem resposta, mostra as dicas por regra e um botão "Tentar de novo". Se a porta 8000 estiver ocupada, tente `--port 8001` e abra `http://127.0.0.1:8001`.
 
 Para editar com recarregamento automático, substitua a última linha por:
 

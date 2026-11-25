@@ -10,17 +10,25 @@ Configuração no arquivo ``.env`` (modelo em ``.env.example``): ``GEMINI_API_KE
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 API = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-PADRAO = 'gemini-flash-latest'
-# Tentados em ordem quando o anterior está ocupado (503/429, comum no plano gratuito) ou falha.
-RESERVAS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
-TIMEOUT = 25
+# Plano gratuito, medido em 25/11/2026: os Flash-Lite respondem em 1-7 s; o Flash comum esgota a cota (429)
+# ou leva mais de 20 s; os 2.5 não existem mais para chaves novas (404). Por isso o Lite vem primeiro.
+PADRAO = 'gemini-flash-lite-latest'
+RESERVAS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-latest']
+TIMEOUT = 12          # por modelo: um modelo lento não segura a tela
+ORCAMENTO = 20        # tempo total por pedido, somando as tentativas
+PAUSA_COTA = 600      # modelo com 429/404 fica 10 min fora da fila
+_pausados: dict[str, float] = {}
+_cache: dict[str, tuple[dict, str]] = {}   # mesmo pedido -> mesma resposta (corrigir e desfazer não gasta cota)
+log = logging.getLogger('uvicorn.error')
 
 
 class LLMIndisponivel(RuntimeError):
@@ -51,7 +59,7 @@ def modelos() -> list[str]:
     return [principal] + [m for m in RESERVAS if m != principal]
 
 
-def _chamar(model: str, system: str, prompt: str, schema: dict, max_tokens: int) -> dict:
+def _chamar(model: str, system: str, prompt: str, schema: dict, max_tokens: int, timeout: float = TIMEOUT) -> dict:
     body = {
         'systemInstruction': {'parts': [{'text': system}]},
         'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
@@ -61,7 +69,7 @@ def _chamar(model: str, system: str, prompt: str, schema: dict, max_tokens: int)
     req = urllib.request.Request(API.format(model=model), data=json.dumps(body).encode('utf-8'),
                                  headers={'x-goog-api-key': os.environ['GEMINI_API_KEY'].strip(),
                                           'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.load(resp)
     cand = (data.get('candidates') or [{}])[0]
     if cand.get('finishReason') not in (None, 'STOP'):
@@ -77,16 +85,32 @@ def gerar_json(system: str, prompt: str, schema: dict, max_tokens: int = 2048) -
     """Devolve (json da resposta, modelo usado). Tenta o modelo principal e depois os de reserva."""
     if not configurado():
         raise LLMIndisponivel('GEMINI_API_KEY não configurada')
-    erros = []
-    for model in modelos():
+    chave = json.dumps([system, prompt, schema, max_tokens], ensure_ascii=False, sort_keys=True)
+    if chave in _cache:
+        return _cache[chave]
+    inicio, erros = time.monotonic(), []
+    fila = [m for m in modelos() if _pausados.get(m, 0) < time.monotonic()] or modelos()
+    for model in fila:
+        resta = ORCAMENTO - (time.monotonic() - inicio)
+        if resta < 2:
+            erros.append('tempo esgotado')
+            break
         try:
-            return _chamar(model, system, prompt, schema, max_tokens), model
+            resultado = (_chamar(model, system, prompt, schema, max_tokens, min(TIMEOUT, resta)), model)
+            log.info('feedback LLM: %s em %.1f s%s', model, time.monotonic() - inicio, f' (antes: {"; ".join(erros)})' if erros else '')
+            if len(_cache) > 200:
+                _cache.clear()
+            _cache[chave] = resultado
+            return resultado
         except urllib.error.HTTPError as exc:
             erros.append(f'{model}: HTTP {exc.code}')
             if exc.code in (400, 401, 403):  # chave ou pedido inválido: o outro modelo não resolve
                 break
+            if exc.code in (404, 429):       # modelo inexistente ou cota esgotada: tira da fila por um tempo
+                _pausados[model] = time.monotonic() + PAUSA_COTA
         except (urllib.error.URLError, TimeoutError, OSError, LLMIndisponivel) as exc:
             erros.append(f'{model}: {exc}')
+    log.warning('feedback LLM indisponível em %.1f s: %s', time.monotonic() - inicio, '; '.join(erros))
     raise LLMIndisponivel('; '.join(erros))
 
 
