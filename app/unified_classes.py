@@ -10,7 +10,7 @@ CLASSES={
  4:('Carne bovina',377,130,''),  # TACO: patinho sem gordura grelhado; na tela só 'Carne bovina'
  5:('Salada',78,65,'Alface crespa crua como referência: misturas têm composição diferente'),
  6:('Batata frita',93,100,'Batata inglesa frita'),
- 7:('Ovo',488,55,'Ovo cozido como referência; altere para ovo frito se necessário'),
+ 7:('Ovo',488,55,'A foto não distingue o preparo: calculado como ovo cozido. Se for frito, troque abaixo.'),  # na tela 'Ovo de galinha'
  8:('Macarrão',542,150,'Macarrão à bolonhesa como aproximação; confirme molho'),
  9:('Maçã',222,130,'Maçã Fuji com casca crua como aproximação'),
  10:('Tomate',157,60,'Tomate com sementes cru como aproximação'),
@@ -45,7 +45,7 @@ FOOD_CLASS_MAP={k:{'nome':a[0],'taco_id':a[1],'grams':a[2],'note':a[3]} for k,a 
 # escuros -> feijão preto (#567); senão carioca (#561, o mais consumido). Na tela aparece só o nome genérico.
 VARIANTES={2:{'nome_exibido':'Feijão cozido','escuro':567,'claro':561}}
 # Nome curto na tela no lugar do nome completo da TACO (a linha da TACO continua a mesma).
-NOMES_EXIBIDOS={1:'Arroz',3:'Frango',4:'Carne bovina'}
+NOMES_EXIBIDOS={1:'Arroz',3:'Frango',4:'Carne bovina',7:'Ovo de galinha'}
 # Preparos que a TACO não tem como item único: a classe vira vários itens da TACO.
 # Frações em massa de uma receita caseira típica, editáveis pelo usuário.
 # Purê: 1 kg de batata cozida + 200 g de leite integral + 50 g de manteiga (~1250 g) -> 80/16/4.
