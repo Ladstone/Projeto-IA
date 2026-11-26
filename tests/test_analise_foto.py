@@ -1,4 +1,4 @@
-"""Correções da Fase A: EXIF, porção por área, área mínima, mapeamento TACO e limitações conhecidas."""
+"""Análise da foto: EXIF, porção por área, área mínima, mapeamento TACO e imagens sem comida."""
 from io import BytesIO
 from pathlib import Path
 

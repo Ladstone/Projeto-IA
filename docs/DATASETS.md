@@ -2,23 +2,26 @@
 
 ## Resumo conferido pela execução do decodificador
 
-O comando `python scripts/verify_datasets.py --myfood ... --brazil ...` foi executado sobre os dois arquivos ZIP enviados. Resultado:
+O comando `python scripts/verify_datasets.py --myfood ... --brazil ... --myfoodrepo ...` lê os ZIPs com o mesmo carregador do treino (`scripts/data_v2.py`). Resultado em 26/11/2026:
 
 | Origem | Treino | Validação | Teste |
 |---|---:|---:|---:|
-| MyFood | 750 | 250 | 250 (máscaras) |
-| Brazilian Food Images | 681 | 234 | 160 (sem máscaras no ZIP) |
-| **Treino conjunto** | **1.431** | **484** | **250 com máscaras para pontuação** |
+| MyFood | 750 | 250 | 250 |
+| Brazilian Food Images | 681 | 119 | 115 |
+| MyFoodRepo v2.0 (amostra com teto) | 1.491 | 292 | 294 |
+| **Total** | **2.922** | **661** | **659** |
+
+Os números são de antes da remoção de quase duplicatas na validação e no teste. O `test_set` do ZIP brasileiro (160 fotos) não tem máscaras e não é usado. O purê do images.cv entra à parte (seção própria, abaixo).
 
 - **MyFood:** imagens `train/*.png`, `val/*.png`, `test/*.png` com anotações em `train_ann`, `val_ann`, `test_ann`. O código converte os rótulos 2 a 10 para IDs comuns; o rótulo 1 indica região ignorada.
 - **Brazilian Food Images:** pastas como `training_set/chicken/` com pares de arquivos imagem `chicken0000.jpg` e máscara `chicken0000_.jpg`. As máscaras são binárias e anotam apenas **a classe daquela pasta** em um prato que pode conter outros alimentos.
 - **Normalização:** `app/unified_classes.py` faz o mapeamento das classes para 28 categorias visuais (21 destes dois datasets + 7 do MyFoodRepo, ver abaixo), unificando, por exemplo, ovo frito/cozido na classe `Ovo`.
-- **Supervisão por pixel (v2, `scripts/data_v2.py`):**
+- **Supervisão por pixel (`scripts/data_v2.py`):**
   - MyFood: as máscaras anotam todos os alimentos da foto. Cada pixel anotado é positivo para sua classe e negativo para as outras 20; o fundo é negativo para as 21.
   - Brasileiro: só um alimento é anotado. Pixels da máscara são positivos para a classe e negativos para as outras 20; pixels fora da máscara são negativos **só para a classe anotada** e desconhecidos para as demais. Isso evita ensinar que outro alimento visível, mas não anotado, é fundo.
   - Imagens sintéticas sem comida (cerca de 8% por época): negativas para todas as classes.
 - **Split:** no conjunto brasileiro, pares de treino/validação são particionados deterministicamente por SHA-1 do conteúdo da foto. No v2, a validação antiga (234 pares) é dividida ao meio, por outro trecho do hash, em **validação nova** e **teste novo**, para que nenhum modelo tenha treinado nas fotos de teste. Depois da remoção de quase duplicatas, restam 75 fotos brasileiras na validação e 78 no teste. Fotos quase duplicadas das de treino são removidas da validação e do teste (os próprios datasets repetem fotos entre divisões).
-- **Treinamento real:** o v3 (alternativo; o ativo é o v2 de 21 classes) é MobileNetV3-Large + LR-ASPP com 28 saídas sigmoid, treinado por `scripts/train_v2.py`, que lê **as três** fontes direto dos ZIPs em uma única execução (o MyFoodRepo via `--myfoodrepo`). Os pesos ficam em `models/unified_21class.pt` e a inferência é `VisionService.predict` em `app/vision.py`. O script antigo do v1 (`scripts/train_unified.py`, rede `FoodUNet`) continua no repositório só como referência.
+- **Treinamento:** todos os modelos do app são MobileNetV3-Large + LR-ASPP com saídas sigmoid, treinados por `scripts/train_v2.py`, que lê as fontes direto dos ZIPs em uma única execução. O **v2** (21 classes, `models/unified_21class.pt`) usa MyFood e Brazilian Food Images; o **v3** (28 classes) acrescenta o MyFoodRepo (`--myfoodrepo`); o **v3d** acrescenta o purê do images.cv (`--mashed`). O app usa os três juntos (ver `docs/RESULTADOS.md`). O script do v1 (`scripts/train_unified.py`, rede `FoodUNet`) saiu do repositório em 26/11/2026 e está no histórico do git.
 
 ### Classes brasileiras anotadas no treino (quantidade de pares)
 
@@ -43,6 +46,10 @@ pastaredsauce 27; pumpkin 27; rice 57; salad 69; tomato 48.
 
 `mashed p.zip`: 1.298 fotos de purê de batata (classe `mashed_potato`) em 256 × 256, já divididas em train 908 / val 194 / test 196, baixadas do images.cv. Só tem a etiqueta "a foto tem purê", sem máscara. `scripts/pseudo_pure.py` gera a máscara com o v3c (foto de um alimento só: toda a comida; senão, onde o v3c diz purê) e usa no máximo 300 fotos de treino e 60 de validação com purê em pelo menos 10% da foto. A divisão `test` não entra no treino: é o teste independente de purê. A versão de 32 × 32 (`mashed.zip`) foi descartada por ser pequena demais. SHA-256 de `mashed p.zip`: `04bb3734605e22ccdf56d1688f3cefd00c6ba87a96d3105f070ddd782078af20`.
 
+## FoodSeg103 (só no experimento v5, 26/11/2026)
+
+Dataset de segmentação com 7.118 fotos e 103 ingredientes ([artigo](https://arxiv.org/abs/2105.05409); cópia usada: `EduardoPacheco/FoodSeg103` no Hugging Face, em arquivos `.parquet`). Foi testado para reforçar tomate, peixe, brócolis, cenoura, batata frita e ovo: entram só fotos em que a classe ocupa 3% ou mais, e 859 fotos de peixe, batata frita e ovo foram revisadas uma a uma (`docs/FOODSEG103_EXCLUSOES.json` lista as que saíram: sushi, peixe inteiro, nachos, chips, ovo mexido, máscara errada). O modelo treinado com ele (v5) **não entrou no app** (tabela 6 de `docs/RESULTADOS.md`). O carregador ficou em `load_foodseg` (`scripts/data_v2.py`, opção `--foodseg` do treino, que precisa do `pyarrow`).
+
 ## Fontes, licenças e verificação
 
 | Dataset | Fonte | Licença (verificada em 21/11/2026) |
@@ -64,6 +71,6 @@ O ZIP do MyFood é o próprio arquivo do Zenodo. No ZIP brasileiro, a pasta `tra
 
 Os dados TACO **não são imagens** e não podem, por si, treinar reconhecimento de alimentos. O modelo prevê categorias como `Frango`, que têm correspondências iniciais **editáveis** em `app/unified_classes.py`: por exemplo, `Frango` aponta provisoriamente para `Frango, peito, sem pele, grelhado` (TACO #410). A tabela TACO, íntegra como 597 registros/26 campos estruturados da **Tabela 1**, está em `app/data/taco_tabela1_completa.csv` e `app/data/taco.json`; as Tabelas 2 e 3 permanecem consultáveis no PDF. O peso da porção é informado/corrigido pelo usuário.
 
-## Recomendações para o treinamento seguinte
+## O que os dados ainda não cobrem
 
-Criar um **conjunto de avaliação anotado de pratos completos** com classes e pesos reais, aumentar diversidade (iluminação/pratos/preparos), testar segmentadores pré-treinados mais robustos e calibrar previsões por classe em validação não vista. Não usar imagens de teste para ajustar hiperparâmetros. Retreinar com logs reprodutíveis e comparar precisão/recall de detecção de alimentos, não apenas IoU supervisionado por classe.
+Quatro retreinos com mais fotos estrangeiras (v3c, v3d, v4 e v5) pioraram quando usados sozinhos nas fotos reais de prato feito. O que falta é **foto brasileira de prato misto**, tirada de celular, com anotação: principalmente tomate em rodelas ou picado, arroz parcialmente coberto e peixe. Um próximo passo viável é juntar essas fotos anotando só a lista de alimentos de cada uma, sem máscara, como foi feito com o purê. As fotos do teste independente (`docs/FOTOS_TESTE_NOVO_GABARITO.json`) não devem ser usadas para ajustar nada.

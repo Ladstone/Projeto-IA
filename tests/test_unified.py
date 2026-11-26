@@ -25,22 +25,21 @@ def dataset_if_available():
     b=Path(os.getenv('PRATOMETRIA_DATASET_BRAZIL',str(Path(__file__).parents[2]/'Brazilian food images.zip')))
     a=Path(os.getenv('PRATOMETRIA_DATASET_MYFOOD',str(Path(__file__).parents[2]/'MyFood Dataset.zip')))
     if not a.exists() or not b.exists():pytest.skip('Uploaded datasets not present, rerun with environment paths')
-    from scripts.train_unified import Combined
-    return Combined(a,b,part='train',dim=64)
+    from scripts.data_v2 import load_records
+    return load_records(a,b,'train',dim=64)
 
 def test_real_brazil_mask_if_zip_available(dataset_if_available):
-    dataset=dataset_if_available
-    brazil=next(i for i,r in enumerate(dataset.records) if r[3]=='brazil' and r[4]=='chicken')
-    _, mask, sup, valid=dataset[brazil]
-    assert sup[2]==1
-    assert sup.sum()==1  # only the annotated chicken head, NOT other foods
-    assert 0<mask[2].sum()<mask[2].numel()
-    assert int(valid.sum())==64*64
+    from scripts.data_v2 import targets_for
+    r=next(r for r in dataset_if_available if r['src']=='brazil' and r['category']=='chicken')
+    target,known=targets_for(r['src'],r['label'],r['cls'])
+    assert r['cls']==3
+    assert known[2].all()  # a classe anotada (frango) é conhecida na foto inteira
+    assert 0<target[2].sum()<target[2].size
+    assert (known[0]==r['label'].astype(bool)).all() and not known[0].all()  # outras classes: só dentro da máscara
 
 def test_mixed_myfood_lunch_if_zip_available(dataset_if_available):
-    dataset=dataset_if_available
-    idx=next(i for i,r in enumerate(dataset.records) if r[3]=='myfood' and r[4]=='lunch')
-    _, mask, sup, valid=dataset[idx]
-    assert sup[0]==1 and sup[1]==1 # rice and beans included in supervised heads
-    assert sup[5]==0  # fries Brazil-only: not presumed absent from MyFood
-    assert mask[0].sum()>0 and mask[1].sum()>0
+    from scripts.data_v2 import targets_for, IGNORE
+    r=next(r for r in dataset_if_available if r['src']=='myfood' and r['category']=='lunch')
+    target,known=targets_for(r['src'],r['label'],r['cls'])
+    assert target[0].sum()>0 and target[1].sum()>0  # arroz e feijão anotados no prato misto
+    assert (known[5]==(r['label']!=IGNORE)).all()  # todas as classes conhecidas, menos em "outro alimento"

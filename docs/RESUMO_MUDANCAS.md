@@ -27,7 +27,7 @@ Comparação da versão original (commit `7a9a682`) com a versão atual da `main
 | Mensagens de erro legíveis e busca TACO ordenada por relevância | Usabilidade |
 | "Purê" detectado vira três itens da TACO: batata cozida (#91, 80%), leite integral (#458, 16%) e manteiga com sal (#261, 4%) — `RECIPES` em `app/unified_classes.py` | A TACO não tem purê de batata; só batata cozida subestimava gordura e calorias |
 
-**Arquivos:** `app/main.py`, `app/unified_classes.py`, `app/static/app.js`, `tests/test_fase_a.py`.
+**Arquivos:** `app/main.py`, `app/unified_classes.py`, `app/static/app.js`, `tests/test_analise_foto.py` (na época, `test_fase_a.py`).
 
 ### Frontend novo
 O resumo nutricional ficava abaixo do catálogo de 597 alimentos e havia 4 avisos competindo entre si.
@@ -98,6 +98,7 @@ O v1 errava de um jeito sistemático:
 - **Tomate e batata frita do v3 (25/11/2026):** a combinação padrão ganhou mais um passo (`CLASSES_DO_V3` em `app/main.py`): onde o v3 marca tomate ou batata frita, vale o v3. Escolhido num conjunto de desenvolvimento de 20 fotos (`docs/FOTOS_DEV_GABARITO.json`) e medido uma vez no teste independente: 74/87 alimentos achados (antes 70/87), 7 inventados (antes 6). O v3 roda uma vez só por foto (o `VisionService` guarda a última predição).
 - **v4 (25/11/2026, experimento sem ganho):** retreino a partir do v2 com mais fotos do MyFoodRepo para tomate, batata frita, cenoura, brócolis e peixe (`--mfr-old-classes "6:250,10:400,11:300,16:200,22:300,24:300"`), purê e aumentos mais fortes (`--aug-forte`: prato longe, recorte mais fechado, luz). Sozinho fez 49/70 no desenvolvimento (combinação: 53/70) e não foi versionado. As opções ficaram em `scripts/train_v2.py` e `scripts/data_v2.py`. Nos scripts de avaliação, `...|modelo.pt:6,10` pega classes específicas de um especialista.
 - **v5 (26/11/2026, experimento sem ganho):** receita do v3d + fotos do FoodSeg103 (arquivos `.parquet` do Hugging Face) para tomate, peixe, brócolis, cenoura, batata frita e ovo, filtradas foto a foto (`docs/FOODSEG103_EXCLUSOES.json`). Opções `--foodseg` e `--foodseg-exclusoes` em `scripts/train_v2.py`; carregador `load_foodseg` em `scripts/data_v2.py`. Como especialista de tomate, batata frita, ovo e cenoura fez 76/87 no teste independente (padrão: 74/87), mas com 11 alimentos inventados (padrão: 7). Não foi adotado nem versionado; detalhes na tabela 6 de `docs/RESULTADOS.md`.
+- **Acabamento para a entrega (26/11/2026):** saiu `scripts/train_unified.py` (treino do v1, cujo modelo já não está no repositório); `scripts/verify_datasets.py` e os testes de dataset passaram a usar o carregador atual (`scripts/data_v2.py`); `tests/test_prototype.py` virou `tests/test_api.py` e `tests/test_fase_a.py` virou `tests/test_analise_foto.py`; `pyarrow` entrou em `requirements-training.txt`; `docs/DATASETS.md` e `docs/GUIA_EQUIPE.md` atualizados.
 - **App:** aceita modelos de 21 ou 28 classes (lê `classes` do `.json`) e ganhou a variável `PRATOMETRIA_MODEL` para testar outro modelo sem trocar o ativo.
 - **Treino:** 15 épocas, cerca de 12 min cada em CPU (~3 h). Interrompido uma vez por falta de RAM e retomado do checkpoint. Melhor época: 15.
 

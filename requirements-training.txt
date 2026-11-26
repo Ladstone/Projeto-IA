@@ -1,2 +1,4 @@
 -r requirements.txt
 pymupdf>=1.24
+# Só para a opção --foodseg do treino (lê os .parquet do FoodSeg103)
+pyarrow>=15

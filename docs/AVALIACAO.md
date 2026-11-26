@@ -1,6 +1,6 @@
 # Avaliação e limitações verificadas
 
-> **Padrão do app desde 25/11/2026:** a combinação descrita nas duas primeiras seções (v2 + categorias novas do v3 + purê do v3d). Até essa data ela rodava só na porta 8001, em teste. Resumo em uma página: [RESULTADOS.md](RESULTADOS.md). Os pesos do v1 e do v2 piloto saíram do repositório; as medidas deles continuam aqui como histórico.
+> **Padrão do app desde 25/11/2026:** a combinação descrita nas duas primeiras seções (v2 + categorias novas do v3 + purê do v3d), mais o tomate e a batata frita do v3 (tabela 5 de RESULTADOS.md). Até essa data ela rodava só na porta 8001, em teste. Os experimentos v4 e v5 não entraram no app (tabelas 5 e 6). Resumo em uma página: [RESULTADOS.md](RESULTADOS.md). Os pesos do v1 e do v2 piloto saíram do repositório; as medidas deles continuam aqui como histórico.
 
 ### Purê do v3d por cima da combinação (desde 24/11/2026)
 

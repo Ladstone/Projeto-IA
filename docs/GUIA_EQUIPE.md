@@ -25,8 +25,8 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 
 ## Pontos prioritários de correção
 
-1. **Falsos positivos:** o v2 reduziu bastante o problema (8% das fotos de teste do MyFood com algum alimento inexistente, contra 94% no v1), e o v3 ficou parecido (9,5%), mas ainda acontece. As classes mais fracas do v3 são Cebola, Peixe, Abóbora e Milho.
-2. **Separação treino/avaliação:** o conjunto brasileiro possui máscaras individuais por classe; é necessário avaliar fotos novas de pratos completos com anotações multiclasse antes de afirmar acurácia geral.
+1. **Erros da combinação:** no teste independente (21 fotos novas) ela achou 74 de 87 alimentos e inventou 7. Os erros que se repetem são tomate em rodelas ou picado, arroz parcialmente coberto, peixe (a classe mais fraca) e feijão inventado em carne escura. Detalhes em `docs/RESULTADOS.md`.
+2. **Testes pequenos:** as fotos reais avaliadas somam 41 (20 de desenvolvimento e 21 independentes). É pouco para afirmar acurácia geral; fotos novas de prato completo, anotadas, são o que mais ajudaria.
 3. **Estimativa de peso:** a porção inicial é a porção padrão da categoria escalada pela área que o alimento ocupa **no prato**: o recorte ou, sem recorte, o retângulo em volta da comida (12% do prato = porção padrão; limitada a 25%–200%). Assim a distância da câmera não muda a porção. É uma heurística, **não uma medição de massa**. O usuário deve informar os gramas.
 4. **Tipo de preparo:** "frango" visual é mapeado provisoriamente para peito grelhado; o usuário precisa confirmar ou substituir.
 5. **Recomendações:** atualmente são regras e comparações com metas por refeição. Não é orientação clínica.
@@ -38,7 +38,7 @@ Atender ao enunciado acadêmico: **módulo de interface, módulo de IA, módulo 
 3. Se um item estiver errado, abrir a busca TACO e substituí-lo por um preparo correto; mostrar o recálculo de nutrientes.
 4. Mostrar o histórico no calendário e o feedback escrito (do prato e do mês), explicando que a IA de texto só redige números que o app calculou.
 5. Mostrar que o módulo visual roda no computador (`app/vision.py`) e combina três modelos: v2, v3 e v3d (`docs/RESULTADOS.md`).
-6. Mostrar que o treinamento lê **MyFood, Brazilian Food Images e MyFoodRepo** (`scripts/train_v2.py`), explicar a supervisão parcial das máscaras brasileiras e a comparação v2 × v3 (`docs/RESUMO_MUDANCAS.md`, seção 3).
+6. Mostrar que o treinamento lê **MyFood, Brazilian Food Images e MyFoodRepo** (`scripts/train_v2.py`), explicar a supervisão parcial das máscaras brasileiras e a comparação entre os modelos (`docs/RESULTADOS.md`).
 7. Exibir os testes (`python -m pytest -q`) e ser claro sobre erros da IA.
 
 ## GitHub
