@@ -10,7 +10,8 @@ Resumo em uma página. Os detalhes de cada medida estão em [AVALIACAO.md](AVALI
 | v2 | MobileNetV3-Large + LR-ASPP, 224 px, 21 categorias, 2 datasets | **base do app** e backup (`models/unified_21class_v2.pt`) |
 | v3 | mesma rede, 28 categorias, + MyFoodRepo | usada só para as 7 categorias novas |
 | v3d | v3 retreinado a partir do v2, + 300 fotos de purê | usada só para o purê |
-| **Combinação** | v2 + categorias novas do v3 + purê do v3d | **padrão do app desde 25/11/2026** |
+| **Combinação** | v2 + categorias novas do v3 + purê do v3d + tomate e batata frita do v3 | **padrão do app desde 25/11/2026** |
+| v4 | retreino a partir do v2 com mais fotos das classes fracas e aumentos mais fortes | experimento sem ganho; não está no repositório |
 
 ## 1. Teste dos datasets (fotos separadas, nunca usadas no treino)
 
@@ -66,8 +67,31 @@ Fotos do Pinterest reunidas em 25/11/2026, **depois** de todas as decisões sobr
 
 **Erros que se repetem na combinação:** tomate em rodelas, picado ou no vinagrete (6 fotos), batata frita (2), arroz parcialmente coberto (4), brócolis e cenoura em cubos.
 
+## 5. Tomate e batata frita do v3 (25/11/2026)
+
+O teste independente mostrou que a combinação perdia tomate no prato misto (o v2 só viu tomate sozinho) e, às vezes, a batata frita. Duas tentativas, comparadas num conjunto de desenvolvimento de 20 fotos (`docs/FOTOS_DEV_GABARITO.json`: o mini teste + 8 fotos da equipe):
+
+| Variante | Desenvolvimento: achados | Inventados |
+|---|---:|---:|
+| Combinação da tabela 4 | 53/70 | 8 |
+| **+ tomate e batata frita do v3** | **56/70** | 8 |
+| v4 sozinho | 49/70 | 7 |
+| v2 + v4 no lugar do v3 e do v3d | 51/70 | 7 |
+| + tomate e batata frita do v4 | 56/70 | 8 |
+
+Empate entre a segunda e a última; ficou a que usa o v3, por inventar menos nas fotos de validação dos datasets (tomate em 60 de 355 contra 65; batata frita em 20 de 364 contra 22) e por não precisar de modelo novo. Só depois da escolha ela foi medida, uma vez, no teste independente:
+
+| Teste independente (21 fotos) | Combinação da tabela 4 | **Com tomate e batata frita do v3 (padrão)** |
+|---|---:|---:|
+| Alimentos achados | 70/87 (80%) | **74/87 (85%)** |
+| Alimentos inventados | 6 | 7 |
+| Fotos sem nenhum erro | 4/21 | **7/21** |
+
+**Leitura:** tomate achado em 3 fotos a mais e batata frita em 2; em uma foto o recorte mudou e a carne se perdeu. O **v4** (2 h de treino, mais fotos suíças de tomate, peixe, brócolis, cenoura e batata frita, aumentos mais fortes) não superou a combinação: retreinar a partir do v2 continua perdendo acertos no prato feito, e o peixe ficou em F1 0,37. O que falta é foto brasileira de prato misto com máscara.
+
 ## Como ler estes números
 
+- **As tabelas 2 a 4 medem a combinação antes do ajuste da tabela 5** (sem o tomate e a batata frita do v3).
 - **O mini teste (tabela 2) foi usado para decidir** as regras da combinação, então é um pouco otimista. O teste independente (tabela 4) não foi usado para decidir nada, mas tem só 21 fotos, de Pinterest: bem iluminadas e vistas de cima. O gabarito das duas listas foi feito à mão, pela presença de cada alimento.
 - **A regra dos 10% é instável perto do limite.** Na foto 21 do teste novo, o peixe visto pelo v3 vai de 8,9% a 10,3% conforme 1 pixel do recorte e a compressão JPEG, e isso decide se o peixe aparece. O script de teste recorta exatamente como a página (`recorte_como_no_app`).
 - **Os testes dos datasets usam fotos das mesmas fontes do treino.** Não garantem o desempenho em qualquer foto de celular.

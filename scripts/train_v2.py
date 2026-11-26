@@ -147,6 +147,7 @@ def main():
     p.add_argument('--brazil-weight', type=float, default=1.0, help='multiplica a chance de sortear fotos do dataset brasileiro')
     p.add_argument('--mfr-old-classes', default=None, help='v3c: "id:teto,..." (ex.: 11:300,16:200). O MyFoodRepo só ensina as '
                    'classes novas e estas; as outras antigas viram "outro alimento". Texto vazio = nenhuma antiga.')
+    p.add_argument('--aug-forte', action='store_true', help='v4: aumentos mais fortes (prato longe, recorte mais fechado, luz)')
     p.add_argument('--mashed', default='', help='npz de purê com pseudo-rótulo (scripts/pseudo_pure.py)')
     p.add_argument('--init-from', default='', help='começa dos pesos de outro modelo (ex.: v2 de 21 classes); saídas a mais começam do zero')
     a = p.parse_args()
@@ -168,9 +169,9 @@ def main():
     log('  opcoes: MyFoodRepo sem classes', skip, '| peso brasileiro', a.brazil_weight, '| MyFoodRepo classes antigas', old, '| init', a.init_from or '-', '| purê pseudo', a.mashed or '-')
     log('  imagens MyFoodRepo por categoria (treino):', dict(sorted(Counter(r['category'] for r in train if r['src'] in ('myfoodrepo', 'mfr_novas')).items())))
     (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo), mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
-                                                     mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed), ensure_ascii=False), encoding='utf-8')
+                                                     mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed, aug_forte=a.aug_forte), ensure_ascii=False), encoding='utf-8')
 
-    tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn)
+    tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn, aug_forte=a.aug_forte)
     tr_ds.py_rng.seed(a.seed)
     sampler = WeightedRandomSampler(sample_weights(train, n_syn, {'brazil': a.brazil_weight}), num_samples=len(tr_ds), replacement=True)
     tr_loader = DataLoader(tr_ds, batch_size=a.batch, sampler=sampler, num_workers=0, drop_last=True)
@@ -242,7 +243,7 @@ def main():
                     thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                     min_region_fraction=MIN_REGION_FRACTION, best_epoch=info['epoch'], epochs_trained=len(history),
                     val_presence_macro_f1=info['val_presence_macro_f1'], val_mean_iou_at_thresholds=info['val_mean_iou_at_thresholds'],
-                    mfr_skip_classes=skip, brazil_weight=a.brazil_weight, mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed,
+                    mfr_skip_classes=skip, brazil_weight=a.brazil_weight, mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed, aug_forte=a.aug_forte,
                     train_size=len(train), val_size=len(val), synthetic_per_epoch=n_syn, val_near_duplicates_removed=removed,
                     selection='época e limiares escolhidos SÓ na validação; teste nunca usado no treino')
         out.with_suffix('.json').write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')

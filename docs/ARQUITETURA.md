@@ -14,6 +14,7 @@ Visão (app/vision.py), padrão = combinação de três modelos MobileNetV3 + LR
   VisionService          v2, 21 classes: decide o prato feito comum
   CombinedVisionService  + 7 classes novas do v3 (foto inteira vai para o v3 se uma delas cobre >= 10%)
   ClassOverrideService   + purê do v3d por cima do resultado
+  ClassOverrideService   + tomate e batata frita do v3 (o v3 roda uma vez só por foto)
        |
        +--> Máscaras e diagnóstico por classe (hipóteses)
        |

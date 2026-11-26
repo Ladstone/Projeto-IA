@@ -1,0 +1,25 @@
+{
+  "descricao": "Conjunto de DESENVOLVIMENTO: fotos reais usadas para comparar variantes e tomar decisões (as 12 do mini teste + 8 da equipe). Por já ter servido para decidir, não vale como medida final; a medida final é docs/FOTOS_TESTE_NOVO_GABARITO.json, que nunca entra em decisão.",
+  "fotos": [
+    {"arquivo": "prato feito 2.jfif", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Frango", "Batata frita" ], "aceito": [ "Farofa", "Tomate", "Cebola", "Salada" ], "obs": "vinagrete e farofa em potinhos ao lado"},
+    {"arquivo": "prato feito 3.jfif", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Frango", "Salada", "Tomate" ], "aceito": []},
+    {"arquivo": "prato feito 4.webp", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Farofa", "Salada", "Tomate" ], "aceito": [ "Cebola", "Repolho" ], "obs": "a folha é couve picada"},
+    {"arquivo": "prato feito 6.jpg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Salada", "Tomate" ], "aceito": []},
+    {"arquivo": "prato feito 7.webp", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Ovo", "Carne bovina", "Salada" ], "aceito": []},
+    {"arquivo": "prato feito daniel.jfif", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Frango", "Batata cozida" ], "aceito": [ "Farofa", "Mandioca", "Abóbora" ], "obs": "batata inteira no molho do frango"},
+    {"arquivo": "almoço ladstone 2026-11-23.jpeg", "grupo": "prato feito", "tem": [ "Arroz", "Feijão", "Carne bovina", "Salada", "Farofa" ], "aceito": [ "Tomate", "Cenoura", "Milho" ]},
+    {"arquivo": "almoço leo.jfif", "grupo": "outros", "tem": [ "Brócolis", "Frango" ], "aceito": []},
+    {"arquivo": "hamburguer duarte.jfif", "grupo": "outros", "tem": [ "Hambúrguer (sanduíche)", "Batata frita" ], "aceito": [ "Salada", "Pão", "Carne bovina" ], "obs": "print de story; batata-doce frita"},
+    {"arquivo": "lasanha.jpg", "grupo": "outros", "tem": [ "Lasanha" ], "aceito": [ "Massa com molho vermelho" ]},
+    {"arquivo": "lasanha.jfif", "grupo": "outros", "tem": [ "Lasanha", "Salada" ], "aceito": [ "Tomate", "Massa com molho vermelho" ]},
+    {"arquivo": "lasanha de duarte.jfif", "grupo": "outros", "tem": [ "Massa com molho vermelho" ], "aceito": [ "Macarrão", "Lasanha" ], "obs": "na verdade é ravióli com molho"},
+    {"arquivo": "almoço 2 daniel.jpeg", "grupo": "equipe", "tem": [ "Macarrão", "Carne bovina" ], "aceito": [ "Massa com molho vermelho" ], "obs": "penne à bolonhesa"},
+    {"arquivo": "almoço jpão.jpeg", "grupo": "equipe", "tem": [ "Arroz", "Carne bovina", "Purê" ], "aceito": [ "Farofa", "Feijão" ], "obs": "feijão preto quase todo coberto"},
+    {"arquivo": "almoço caio.jpeg", "grupo": "equipe", "tem": [ "Frango", "Tomate", "Purê", "Cenoura" ], "aceito": [ "Arroz", "Cebola", "Salada" ], "obs": "arroz amarelo pequeno sob o frango; couve-flor"},
+    {"arquivo": "almoço ladstone 2026-11-24 at 13.05.50.jpeg", "grupo": "equipe", "tem": [ "Arroz", "Feijão", "Farofa", "Frango" ], "aceito": [ "Cenoura" ], "obs": "coxas de frango assadas, escuras"},
+    {"arquivo": "almoço gabriel f..jpeg", "grupo": "equipe", "tem": [ "Farofa", "Frango" ], "aceito": [ "Arroz", "Bife à milanesa", "Salada com maionese", "Purê", "Brócolis", "Salada", "Tomate", "Cenoura", "Carne bovina" ], "obs": "self-service com muitos itens misturados"},
+    {"arquivo": "almoço pilly.jfif", "grupo": "equipe", "tem": [ "Arroz", "Carne bovina" ], "aceito": [ "Farofa" ], "obs": "foto inclinada, prato longe"},
+    {"arquivo": "prato feito 8.jpg", "grupo": "equipe", "tem": [ "Arroz", "Feijão", "Carne bovina", "Batata frita", "Ovo", "Tomate", "Salada" ], "aceito": []},
+    {"arquivo": "WhatsApp Image 2026-11-24 at 13.38.57.jpeg", "grupo": "equipe", "tem": [ "Arroz", "Feijão", "Ovo" ], "aceito": [], "obs": "omelete"}
+  ]
+}

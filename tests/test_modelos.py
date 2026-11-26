@@ -30,8 +30,12 @@ def test_v3_alternative_still_loads_and_predicts():
 
 def test_padrao_e_a_combinacao_e_v2_fica_de_backup():
     padrao = carregar_visao({})
-    assert isinstance(padrao, ClassOverrideService) and isinstance(padrao.main, CombinedVisionService)
-    assert padrao.n_class == 28 and padrao.main.n_base == 21
+    # de fora para dentro: tomate e batata frita do v3 -> purê do v3d -> combinação v2 + classes novas do v3
+    assert isinstance(padrao, ClassOverrideService) and padrao.classes == (6, 10)
+    assert isinstance(padrao.main, ClassOverrideService) and padrao.main.classes == (16,)
+    combinado = padrao.main.main
+    assert isinstance(combinado, CombinedVisionService) and combinado.novas is padrao.especialista  # v3 carregado uma vez
+    assert padrao.n_class == 28 and combinado.n_base == 21
     mask, probs = padrao.predict(Image.open(LUNCH))
     assert mask.shape == (224, 224) and probs.shape == (28, 224, 224)
     backup = carregar_visao({'PRATOMETRIA_MODEL': str(ROOT / 'models' / 'unified_21class_v2.pt')})

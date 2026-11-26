@@ -90,10 +90,12 @@ class MealUpdate(BaseModel):
 class FeedbackPrato(BaseModel):
     items:list[MealItem]
 
+CLASSES_DO_V3=(6,10)  # Batata frita e Tomate: o v2 só viu tomate sozinho e perde os dois no prato misto
+
 def carregar_visao(env=os.environ):
     """Monta o serviço de visão. Padrão (sem variáveis de ambiente): a combinação, com base v2 (prato feito)
-    + classes novas do v3 (CombinedVisionService) + purê do v3d (ClassOverrideService); ver app/vision.py
-    e docs/RESULTADOS.md. PRATOMETRIA_MODEL=arquivo.pt sobe SÓ esse modelo (ex.: o v2 puro, de backup),
+    + classes novas do v3 (CombinedVisionService) + purê do v3d + tomate e batata frita do v3
+    (ClassOverrideService); ver app/vision.py e docs/RESULTADOS.md. PRATOMETRIA_MODEL=arquivo.pt sobe SÓ esse modelo (ex.: o v2 puro, de backup),
     a não ser que PRATOMETRIA_MODEL_NOVAS / PRATOMETRIA_MODEL_PURE também sejam informadas."""
     base=Path(env.get('PRATOMETRIA_MODEL') or MODEL)
     if not base.exists():raise FileNotFoundError('Arquivo do modelo não encontrado em models/.')
@@ -101,8 +103,10 @@ def carregar_visao(env=os.environ):
     novas=env.get('PRATOMETRIA_MODEL_NOVAS') or (str(MODEL_NOVAS) if padrao and MODEL_NOVAS.exists() else '')
     pure=env.get('PRATOMETRIA_MODEL_PURE') or (str(MODEL_PURE) if padrao and MODEL_PURE.exists() else '')
     service=VisionService(base)
-    if novas:service=CombinedVisionService(service,VisionService(Path(novas)))
+    v3=VisionService(Path(novas)) if novas else None
+    if v3:service=CombinedVisionService(service,v3)
     if pure:service=ClassOverrideService(service,VisionService(Path(pure)))
+    if padrao and v3:service=ClassOverrideService(service,v3,CLASSES_DO_V3)  # mesmo objeto: o v3 roda uma vez só por foto
     return service
 
 vision=None

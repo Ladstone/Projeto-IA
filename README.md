@@ -47,7 +47,7 @@ A rede é uma **MobileNetV3-Large + LR-ASPP** (segmentação: classifica cada pi
 | Modelo | Arquivo | Papel na combinação |
 |---|---|---|
 | v2 (21 categorias) | `models/unified_21class.pt` | base: decide o prato feito comum |
-| v3 (28 categorias) | `models/unified_28class_v3.pt` | traz 7 categorias novas: brócolis, batata cozida, peixe, pão, cebola, hambúrguer e lasanha |
+| v3 (28 categorias) | `models/unified_28class_v3.pt` | traz 7 categorias novas (brócolis, batata cozida, peixe, pão, cebola, hambúrguer e lasanha) e o tomate e a batata frita, que o v2 perde no prato misto |
 | v3d (28 categorias) | `models/unified_28class_v3d.pt` | só o purê, que o v2 confundia com arroz |
 
 `models/unified_21class_v2.pt` é uma cópia do v2, guardada como **backup**. Para rodar só o v2:
@@ -64,7 +64,7 @@ Resultados resumidos (detalhes em [docs/RESULTADOS.md](docs/RESULTADOS.md)):
 | MyFood: pratos 100% corretos no teste | 6% | 88% | — |
 | Fotos reais da equipe, pratos fora do comum: alimentos achados | — | 1/8 | 5/8 |
 | Fotos de purê em que o purê foi achado | — | 1% | 90% |
-| Teste independente (21 fotos novas): alimentos achados | — | 70% | 80% |
+| Teste independente (21 fotos novas): alimentos achados | — | 70% | 85% |
 
 ## Limitações
 

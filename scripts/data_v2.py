@@ -315,7 +315,21 @@ def synthetic_eval_set(per_kind=20, seed=1_000_003):
 
 
 # ---------------------------------------------------------------- datasets PyTorch
-def _augment(img, label, py_rng):
+def _zoom_out(img, label, py_rng):
+    """Encolhe a foto para 55-90% e completa com uma cor lisa parecida com mesa/toalha (rótulo 0).
+    Simula o prato mais longe: o app analisa primeiro a foto inteira para sugerir o recorte."""
+    dim = img.shape[0]
+    side = int(dim * py_rng.uniform(.55, .9))
+    x, y = py_rng.randrange(dim - side + 1), py_rng.randrange(dim - side + 1)
+    base = img.reshape(-1, 3)[[0, dim - 1, -dim, -1]].mean(0)  # média dos 4 cantos
+    canvas = np.empty_like(img); canvas[:] = np.clip(base + py_rng.uniform(-25, 25), 0, 255).astype(np.uint8)
+    out_label = np.zeros_like(label)
+    canvas[y:y + side, x:x + side] = np.asarray(Image.fromarray(np.ascontiguousarray(img)).resize((side, side), Image.Resampling.BILINEAR))
+    out_label[y:y + side, x:x + side] = np.asarray(Image.fromarray(np.ascontiguousarray(label)).resize((side, side), Image.Resampling.NEAREST))
+    return canvas, out_label
+
+
+def _augment(img, label, py_rng, forte=False):
     if py_rng.random() < .5:
         img, label = img[:, ::-1], label[:, ::-1]
     if py_rng.random() < .15:
@@ -323,8 +337,11 @@ def _augment(img, label, py_rng):
     if py_rng.random() < .25:
         k = py_rng.randrange(4); img, label = np.rot90(img, k), np.rot90(label, k)
     dim = img.shape[0]
-    if py_rng.random() < .5:  # recorte aleatório de 60% a 100% do lado
-        side = int(dim * py_rng.uniform(.6, 1.0)); x, y = py_rng.randrange(dim - side + 1), py_rng.randrange(dim - side + 1)
+    zoom = py_rng.random()
+    if forte and zoom < .25:  # v4: prato mais longe
+        img, label = _zoom_out(img, label, py_rng)
+    elif zoom < (.75 if forte else .5):  # recorte aleatório de 60% a 100% do lado (v4: de 45%)
+        side = int(dim * py_rng.uniform(.45 if forte else .6, 1.0)); x, y = py_rng.randrange(dim - side + 1), py_rng.randrange(dim - side + 1)
         img = np.asarray(Image.fromarray(np.ascontiguousarray(img[y:y + side, x:x + side])).resize((dim, dim), Image.Resampling.BILINEAR))
         label = np.asarray(Image.fromarray(np.ascontiguousarray(label[y:y + side, x:x + side])).resize((dim, dim), Image.Resampling.NEAREST))
     img = img.astype(np.float32)
@@ -332,14 +349,17 @@ def _augment(img, label, py_rng):
         gray = img.mean(2, keepdims=True); img = gray + (img - gray) * py_rng.uniform(.8, 1.2)
     if py_rng.random() < .5:
         img = img * py_rng.uniform(.8, 1.2) + py_rng.uniform(-10, 10)
+    if forte and py_rng.random() < .2:  # v4: luz mais variada (foto escura ou estourada)
+        img = img * py_rng.uniform(.6, 1.4)
     return np.clip(img, 0, 255).astype(np.uint8), np.ascontiguousarray(label)
 
 
 class FoodDataset(Dataset):
     """Registros reais + ``n_synthetic`` imagens sem comida geradas na hora (só no treino)."""
 
-    def __init__(self, records, dim=224, augment=False, n_synthetic=0, normalize='imagenet'):
+    def __init__(self, records, dim=224, augment=False, n_synthetic=0, normalize='imagenet', aug_forte=False):
         self.records, self.dim, self.augment, self.n_synthetic, self.normalize = records, dim, augment, n_synthetic, normalize
+        self.aug_forte = aug_forte
         self.py_rng = random.Random()
 
     def __len__(self): return len(self.records) + self.n_synthetic
@@ -354,7 +374,7 @@ class FoodDataset(Dataset):
             r = self.records[idx]
             img, label, src, cls, unknown = r['img'], r['label'], r['src'], r['cls'], r['has_unknown_food']
         if self.augment:
-            img, label = _augment(img, label, self.py_rng)
+            img, label = _augment(img, label, self.py_rng, self.aug_forte)
         target, known = targets_for(src, np.ascontiguousarray(label), cls)
         status = presence_status(src, label, cls, unknown)
         return preprocess(np.ascontiguousarray(img), self.normalize), torch.from_numpy(target), torch.from_numpy(known), torch.from_numpy(status)

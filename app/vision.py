@@ -122,10 +122,18 @@ class VisionService:
         self.model.load_state_dict(state)
         self.model.eval().to(device)
         self.thresholds = {int(k): float(v) for k, v in self.metadata.get('thresholds', {}).items()}
+        self._ultima = None  # (imagem, dimensão, resultado): o mesmo modelo pode ser consultado 2x na combinação
 
     @torch.no_grad()
     def predict(self, img: Image.Image, dimension=None):
         dimension = dimension or self.resolution
+        if self._ultima and self._ultima[0] is img and self._ultima[1] == dimension:
+            return self._ultima[2]
+        resultado = self._predict(img, dimension)
+        self._ultima = (img, dimension, resultado)
+        return resultado
+
+    def _predict(self, img, dimension):
         arr = np.asarray(img.convert('RGB').resize((dimension, dimension), Image.Resampling.BILINEAR), dtype=np.uint8)
         data = preprocess(arr, self.normalize).unsqueeze(0).to(self.device)
         probs = torch.sigmoid(self.model(data))[0].cpu().numpy()  # (n_class,H,W)
@@ -219,9 +227,14 @@ def load_vision(spec, root=None):
     def resolve(p):
         p = Path(p)
         return p if p.is_absolute() or root is None else Path(root) / p
-    spec, _, especialista = str(spec).partition('|')
-    if especialista:
-        return ClassOverrideService(load_vision(spec, root), VisionService(resolve(especialista)))
+    spec, _, especialista = str(spec).rpartition('|')
+    if spec:  # "...|c.pt" (purê) ou "...|c.pt:6,10" (outras classes); pode encadear vários especialistas
+        arquivo, _, classes = especialista.rpartition(':')
+        if not arquivo or not classes.replace(',', '').isdigit():  # sem ":ids" (ou é o ":" de "C:\...")
+            arquivo, classes = especialista, '16'
+        ids = tuple(int(c) for c in classes.split(','))
+        return ClassOverrideService(load_vision(spec, root), VisionService(resolve(arquivo)), ids)
+    spec = especialista
     spec, _, modo = spec.partition('@')
     parts = spec.split('+')
     if len(parts) == 1:
