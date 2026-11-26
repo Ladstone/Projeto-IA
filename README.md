@@ -68,7 +68,7 @@ Resultados resumidos (detalhes em [docs/RESULTADOS.md](docs/RESULTADOS.md)):
 
 ## Limitações
 
-- **A identificação erra.** As categorias mais fracas são milho, cebola e peixe. O app sempre deixa a pessoa corrigir.
+- **A identificação erra.** As categorias mais fracas são milho, cebola, peixe e salada de maionese. O app sempre deixa a pessoa corrigir.
 - **A foto não mede peso**, óleo, molho nem modo de preparo.
 - **Os testes com fotos reais são pequenos.** O teste independente tem 21 fotos, de Pinterest; fotos de celular no dia a dia tendem a ser mais difíceis.
 - **Não é orientação nutricional.** As metas e os feedbacks são estimativas educacionais e não substituem um nutricionista.
