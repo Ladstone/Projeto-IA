@@ -25,8 +25,9 @@ from app.vision import build_model, MIN_REGION_FRACTION
 from scripts.data_v2 import load_records, drop_near_duplicates, FoodDataset, sample_weights
 
 
-def datasets_used(myfoodrepo):
-    return ['MyFood Dataset', 'Brazilian Food Images'] + (['MyFoodRepo v2.0'] if myfoodrepo else [])
+def datasets_used(myfoodrepo, mashed='', foodseg=''):
+    return (['MyFood Dataset', 'Brazilian Food Images'] + (['MyFoodRepo v2.0'] if myfoodrepo else [])
+            + (['Mashed potato (images.cv)'] if mashed else []) + (['FoodSeg103'] if foodseg else []))
 
 THRESHOLDS = np.round(np.arange(0.05, 0.951, 0.05), 2)
 MIN_VAL_POSITIVES = 3  # classe com menos imagens positivas na validação não entra na média de F1
@@ -147,6 +148,8 @@ def main():
     p.add_argument('--brazil-weight', type=float, default=1.0, help='multiplica a chance de sortear fotos do dataset brasileiro')
     p.add_argument('--mfr-old-classes', default=None, help='v3c: "id:teto,..." (ex.: 11:300,16:200). O MyFoodRepo só ensina as '
                    'classes novas e estas; as outras antigas viram "outro alimento". Texto vazio = nenhuma antiga.')
+    p.add_argument('--foodseg', default='', help='v5: pasta com os .parquet do FoodSeg103')
+    p.add_argument('--foodseg-exclusoes', default=str(ROOT / 'docs' / 'FOODSEG103_EXCLUSOES.json'), help='fotos fora por classe (revisão visual)')
     p.add_argument('--aug-forte', action='store_true', help='v4: aumentos mais fortes (prato longe, recorte mais fechado, luz)')
     p.add_argument('--mashed', default='', help='npz de purê com pseudo-rótulo (scripts/pseudo_pure.py)')
     p.add_argument('--init-from', default='', help='começa dos pesos de outro modelo (ex.: v2 de 21 classes); saídas a mais começam do zero')
@@ -159,16 +162,18 @@ def main():
     t0 = time.time()
     skip = [int(x) for x in a.mfr_skip_classes.split(',') if x.strip()]
     old = None if a.mfr_old_classes is None else {int(k): int(v) for k, v in (x.split(':') for x in a.mfr_old_classes.split(',') if x.strip())}
-    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_skip_classes=skip, mfr_old_classes=old, mashed_npz=a.mashed or None)
-    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_old_classes=old, mashed_npz=a.mashed or None), train)
+    fs_exc = json.loads(Path(a.foodseg_exclusoes).read_text(encoding='utf-8'))['excluir'] if a.foodseg and Path(a.foodseg_exclusoes).exists() else None
+    train = load_records(a.myfood, a.brazil, 'train', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_skip_classes=skip, mfr_old_classes=old, mashed_npz=a.mashed or None, foodseg_dir=a.foodseg or None, foodseg_exclusoes=fs_exc)
+    val, removed = drop_near_duplicates(load_records(a.myfood, a.brazil, 'val', a.dimension, myfoodrepo_zip=a.myfoodrepo or None, mfr_old_classes=old, mashed_npz=a.mashed or None, foodseg_dir=a.foodseg or None, foodseg_exclusoes=fs_exc), train)
     n_syn = int(round(a.synthetic_frac * len(train)))
     log('DADOS treino', len(train), 'validacao', len(val), 'quase-duplicatas removidas da val', removed,
         'sinteticas/epoca', n_syn, f'({time.time() - t0:.0f}s)')
     per_src = lambda recs: dict(Counter(r['src'] for r in recs))
     log('  por fonte: treino', per_src(train), 'validacao', per_src(val), '| classes', N_CLASS)
     log('  opcoes: MyFoodRepo sem classes', skip, '| peso brasileiro', a.brazil_weight, '| MyFoodRepo classes antigas', old, '| init', a.init_from or '-', '| purê pseudo', a.mashed or '-')
+    log('  imagens FoodSeg103 por categoria (treino):', dict(sorted(Counter(r['category'] for r in train if r['src'] == 'foodseg').items())))
     log('  imagens MyFoodRepo por categoria (treino):', dict(sorted(Counter(r['category'] for r in train if r['src'] in ('myfoodrepo', 'mfr_novas')).items())))
-    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo), mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
+    (run / 'config.json').write_text(json.dumps(dict(classes=N_CLASS, datasets=datasets_used(a.myfoodrepo, a.mashed, a.foodseg), mfr_skip_classes=skip, brazil_weight=a.brazil_weight,
                                                      mfr_old_classes=old, init_from=a.init_from, mashed=a.mashed, aug_forte=a.aug_forte), ensure_ascii=False), encoding='utf-8')
 
     tr_ds = FoodDataset(train, a.dimension, augment=True, n_synthetic=n_syn, aug_forte=a.aug_forte)
@@ -239,7 +244,7 @@ def main():
         out = Path(a.out)
         torch.save(torch.load(run / 'best.pt', weights_only=True), out)
         meta = dict(model=f'MobileNetV3-Large (ImageNet) + LR-ASPP, {N_CLASS} saídas sigmoid', architecture='lraspp_mobilenet_v3',
-                    normalize='imagenet', classes=N_CLASS, resolution=a.dimension, datasets=datasets_used(a.myfoodrepo),
+                    normalize='imagenet', classes=N_CLASS, resolution=a.dimension, datasets=datasets_used(a.myfoodrepo, a.mashed, a.foodseg),
                     thresholds={str(k): v for k, v in info['thresholds'].items()}, threshold_method=info['threshold_method'],
                     min_region_fraction=MIN_REGION_FRACTION, best_epoch=info['epoch'], epochs_trained=len(history),
                     val_presence_macro_f1=info['val_presence_macro_f1'], val_mean_iou_at_thresholds=info['val_mean_iou_at_thresholds'],

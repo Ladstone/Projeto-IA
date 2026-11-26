@@ -26,6 +26,7 @@ Supervisão por pixel (``target`` e ``known``, ambos N_CLASS x H x W)
 """
 import hashlib, io, json, random, zipfile
 from collections import Counter
+from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import torch
@@ -166,8 +167,63 @@ def load_mashed(npz_path, part):
             for n, img, label in zip(d[f'{part}_names'], d[f'{part}_img'], d[f'{part}_label'])]
 
 
+# FoodSeg103 (v5): ingrediente do dataset -> classe do app. Só estas classes ensinam; o resto vira "outro alimento".
+FOODSEG_LABELS = {73: 10, 3: 6, 24: 7, 54: 24, 87: 22, 84: 11}   # tomato, french fries, egg, fish, broccoli, carrot
+FOODSEG_CAPS = {'train': {10: 400, 11: 300, 22: 300, 6: 400, 7: 400, 24: 400}, 'val': {10: 80, 11: 60, 22: 60, 6: 80, 7: 80, 24: 80}}
+FOODSEG_MIN_AREA = 0.03
+
+
+def load_foodseg(pasta, part, dim=224, exclusoes=None):
+    """Fotos do FoodSeg103 (arquivos .parquet do Hugging Face: train-*.parquet e validation-*.parquet).
+
+    - Entram só fotos em que uma das classes de ``FOODSEG_LABELS`` ocupa >= 3% da imagem, com teto por classe.
+    - ``exclusoes``: {classe do app: {'train': [ids], 'val': [ids]}}, feito olhando as fotos (sushi e peixe
+      inteiro, nachos e chips, ovo mexido/na casca...). Nessas fotos os pixels daquela classe viram IGNORE:
+      não ensinam que é a classe nem que não é, e a foto ainda pode entrar por outra classe.
+    - Os outros ingredientes do dataset viram IGNORE ("outro alimento"); o fundo (0) continua fundo.
+    Não há divisão de teste: ``part='test'`` devolve lista vazia."""
+    import pyarrow.parquet as pq
+    from PIL import ImageOps
+    if part not in ('train', 'val'):
+        return []
+    exclusoes = {int(k): {s: set(v) for s, v in d.items()} for k, d in (exclusoes or {}).items()}
+    caps, count, records = FOODSEG_CAPS[part], Counter(), []
+    FULLY_ANNOTATED['foodseg'] = sorted(set(FOODSEG_LABELS.values()))
+    prefixo = 'train-' if part == 'train' else 'validation-'
+    for arq in sorted(Path(pasta).glob(prefixo + '*.parquet')):
+        for lote in pq.ParquetFile(arq).iter_batches(batch_size=32):
+            cls_col = lote.column('classes_on_image').to_pylist()
+            quer = [i for i, cs in enumerate(cls_col) if any(c in FOODSEG_LABELS for c in cs)]
+            if not quer:
+                continue
+            imgs, labs, ids = lote.column('image').to_pylist(), lote.column('label').to_pylist(), lote.column('id').to_pylist()
+            for i in quer:
+                m = np.asarray(Image.open(io.BytesIO(labs[i]['bytes'])))
+                fora = {u for u in set(FOODSEG_LABELS.values()) if int(ids[i]) in exclusoes.get(u, {}).get(part, ())}
+                boas = [FOODSEG_LABELS[c] for c in cls_col[i] if c in FOODSEG_LABELS and FOODSEG_LABELS[c] not in fora
+                        and (m == c).mean() >= FOODSEG_MIN_AREA]
+                abertas = [u for u in boas if count[u] < caps[u]]
+                if not abertas:
+                    continue
+                im = ImageOps.exif_transpose(Image.open(io.BytesIO(imgs[i]['bytes']))).convert('RGB')
+                if im.size != (m.shape[1], m.shape[0]):
+                    continue  # máscara em outra orientação/tamanho: descarta em vez de errar
+                small = np.asarray(Image.fromarray(m).resize((dim, dim), Image.Resampling.NEAREST))
+                label = np.where(small == 0, 0, IGNORE).astype(np.uint8)
+                for c, u in FOODSEG_LABELS.items():
+                    if u in boas:  # classe excluída na revisão ou pequena demais (< 3%) fica "desconhecido"
+                        label[small == c] = u
+                primary = min(abertas, key=lambda u: count[u] / caps[u])  # a classe mais "vazia" puxa a foto
+                for u in boas:
+                    count[u] += 1
+                records.append(dict(src='foodseg', category=f'fs:{primary}', name=f'{arq.name}#{ids[i]}', cls=None,
+                                    img=np.asarray(im.resize((dim, dim), Image.Resampling.BILINEAR), dtype=np.uint8),
+                                    label=label, has_unknown_food=bool((label == IGNORE).any()), hash=dhash(im), raw=None))
+    return records
+
+
 def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodrepo_zip=None, mfr_skip_classes=(), mfr_old_classes=None,
-                 mashed_npz=None):
+                 mashed_npz=None, foodseg_dir=None, foodseg_exclusoes=None):
     """Lê uma divisão. Cada registro: img (dim x dim x 3), label (dim x dim), metadados."""
     records = []
     with zipfile.ZipFile(myfood_zip) as z:
@@ -212,6 +268,8 @@ def load_records(myfood_zip, brazil_zip, part, dim=224, keep_raw=False, myfoodre
         records += load_myfoodrepo(myfoodrepo_zip, part, dim, keep_raw, skip_classes=mfr_skip_classes, old_classes=mfr_old_classes)
     if mashed_npz:
         records += load_mashed(mashed_npz, part)
+    if foodseg_dir:
+        records += load_foodseg(foodseg_dir, part, dim, foodseg_exclusoes)
     if not records:
         raise ValueError(f'Nenhuma imagem na divisão {part}')
     return records

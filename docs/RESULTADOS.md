@@ -12,6 +12,7 @@ Resumo em uma página. Os detalhes de cada medida estão em [AVALIACAO.md](AVALI
 | v3d | v3 retreinado a partir do v2, + 300 fotos de purê | usada só para o purê |
 | **Combinação** | v2 + categorias novas do v3 + purê do v3d + tomate e batata frita do v3 | **padrão do app desde 25/11/2026** |
 | v4 | retreino a partir do v2 com mais fotos das classes fracas e aumentos mais fortes | experimento sem ganho; não está no repositório |
+| v5 | receita do v3d + fotos filtradas do FoodSeg103 (tomate, peixe, brócolis, cenoura, batata frita, ovo) | experimento sem ganho; não está no repositório |
 
 ## 1. Teste dos datasets (fotos separadas, nunca usadas no treino)
 
@@ -88,6 +89,28 @@ Empate entre a segunda e a última; ficou a que usa o v3, por inventar menos nas
 | Fotos sem nenhum erro | 4/21 | **7/21** |
 
 **Leitura:** tomate achado em 3 fotos a mais e batata frita em 2; em uma foto o recorte mudou e a carne se perdeu. O **v4** (2 h de treino, mais fotos suíças de tomate, peixe, brócolis, cenoura e batata frita, aumentos mais fortes) não superou a combinação: retreinar a partir do v2 continua perdendo acertos no prato feito, e o peixe ficou em F1 0,37. O que falta é foto brasileira de prato misto com máscara.
+
+## 6. v5 com o FoodSeg103 (26/11/2026, sem ganho)
+
+Mais uma tentativa de reforçar as classes fracas: a receita do v3d com fotos do FoodSeg103, revisadas uma a uma (859 fotos vistas; saíram sushi, peixe inteiro, nachos, chips, ovo mexido e máscaras erradas; lista em `docs/FOODSEG103_EXCLUSOES.json`). 8 épocas, F1 de presença na validação 0,830; peixe subiu de 0,40 para 0,54.
+
+| Variante | Desenvolvimento: achados | Inventados | Sem erro |
+|---|---:|---:|---:|
+| Padrão (tabela 5) | 56/70 | 8 | 7/20 |
+| v5 sozinho | 51/70 | 13 | 6/20 |
+| v2 + v5 no lugar do v3 e do v3d | 53/70 | 10 | 7/20 |
+| Padrão + tomate e batata frita do v5 | 57/70 | 8 | 9/20 |
+| Padrão + tomate, batata frita, ovo e cenoura do v5 | 58/70 | 7 | 10/20 |
+
+A última foi a escolhida e medida uma vez no teste independente:
+
+| Teste independente (21 fotos) | **Padrão** | Com o v5 |
+|---|---:|---:|
+| Alimentos achados | 74/87 (85%) | 76/87 (87%) |
+| Alimentos inventados | **7** | 11 |
+| Fotos sem nenhum erro | 7/21 | 7/21 |
+
+**Leitura:** o v5 achou cenoura em 2 fotos a mais, mas inventou cenoura em 3 e ovo em 2; em tomate e batata frita empatou com o v3. O ganho visto no desenvolvimento não se repetiu, e o padrão não mudou. Subir o limiar da cenoura para 0,99 corta as invenções na validação (47 para 18 em 888 fotos, perdendo 11 de 124 acertos), mas isso não foi confirmado em fotos novas; no ovo o limiar não resolve. É o quarto retreino (v3c, v3d, v4, v5) que piora sozinho nas fotos reais: o limite está nos dados, não na duração do treino.
 
 ## Como ler estes números
 
